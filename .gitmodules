@@ -1,0 +1,3 @@
+[submodule "rpi-led-matrix"]
+	path = rpi-led-matrix
+	url = https://github.com/alexeden/rpi-led-matrix.git

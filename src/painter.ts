@@ -22,7 +22,7 @@ export class Painter {
 
     public getFontInstance(name: string, path: string): matrix.FontInstance {
         let cachedFont = this.fontCache.find((font: matrix.FontInstance) => {
-            font.name() == name && font.path() == path;
+            return font.name() == name && font.path() == path;
         });
         if(cachedFont == undefined){
             // Push font
@@ -33,6 +33,7 @@ export class Painter {
     }
 
     protected paint(): void {
+        this.matrix.clear();
         this.getCanvas().getCanvasSections().forEach((canvasSection: CanvasSection) => {
             canvasSection.get().representation.forEach(paintingInstruction => {
                 // Do stuff here.
@@ -45,9 +46,9 @@ export class Painter {
                         let color = paintingInstruction.drawModeOptions.color;
                         let fill = paintingInstruction.drawModeOptions.fill || false;
                         // console.log("color", color);
-                        this.matrix.fgColor(color); // TODO replace with value from DrawModeOptions
+                        this.matrix.fgColor(color);
                         if(fill){
-                            // this.matrix.drawFilledRect(x, y, width, height);
+                            this.matrix.drawFilledRect(x, y, width, height);
                         }
                         else {
                             this.matrix.drawRect(x, y, width, height);
@@ -60,9 +61,9 @@ export class Painter {
                         let r = (paintingInstruction.width as number) / 2;
                         let color = paintingInstruction.drawModeOptions.color;
                         let fill = paintingInstruction.drawModeOptions.fill || false;
-                        this.matrix.fgColor(color); // TODO replace with value from DrawModeOptions
+                        this.matrix.fgColor(color); 
                         if(fill){
-                            // this.matrix.drawFilledCircle(x, y, r);
+                            this.matrix.drawFilledCircle(x, y, r);
                         }
                         else {
                             this.matrix.drawCircle(x, y, r);
@@ -74,7 +75,16 @@ export class Painter {
                         break;
                     }
                     case DrawMode.POLYGON: {
-                        console.error("Not implemented.");
+                        // console.error("Not implemented.");
+                        let color = paintingInstruction.drawModeOptions.color;
+
+                        let coordinateArray: number[] = [];
+                        (paintingInstruction.points as Point[]).forEach((point: Point) => {
+                            coordinateArray.push(point.x);
+                            coordinateArray.push(point.y);
+                        });
+                        this.matrix.fgColor(color);
+                        this.matrix.drawPolygon(coordinateArray);
                         break;
                     }
                     case DrawMode.PIXEL: {
@@ -90,16 +100,14 @@ export class Painter {
                         let color = (paintingInstruction.drawModeOptions.color);
                         let font = this.getFontInstance((((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).font as string), (((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).fontPath as string));
                         this.matrix.font(font);
-                        this.matrix.fgColor(color); // TODO replace with value from DrawModeOptions
+                        this.matrix.fgColor(color);
                         this.matrix.drawText(text, x, y);
                         break;
                     }
                 }
             });
         });
-        console.log("Working...");
         this.matrix.sync();
-        setTimeout(() => {}, 30000);
     }
 
 
@@ -119,6 +127,17 @@ export class Painter {
                     points: {x: 1, y: 1, z: 1},
                     width: 10,
                     height: 10
+                },
+                {
+                    drawMode: DrawMode.POLYGON,
+                    drawModeOptions: {color: 0x00FF00},
+                    points: [
+                        {x: 20, y: 1, z: 1},
+                        {x: 30, y: 10, z: 1},
+                        {x: 10, y: 10, z: 1}
+                    ]
+                    // width: 10,
+                    // height: 10
                 }
         ], true, 1, "status");
 
@@ -134,23 +153,41 @@ export class Painter {
         this.getCanvas().getCanvasSection("status")?.setRepresentation([
             {
                 drawMode: DrawMode.RECTANGLE,
-                drawModeOptions: {color: Math.random() * 16777216},
+                drawModeOptions: {color: Math.random() * 16777216, fill: true},
                 points: {x: 1, y: 1, z: 1},
                 width: 10,
                 height: 10
             },
             {
                 drawMode: DrawMode.CIRCLE,
-                drawModeOptions: {color: Math.random() * 16777216},
+                drawModeOptions: {color: Math.random() * 16777216, fill: true},
                 points: {x: 1, y: 1, z: 1},
                 width: 10,
                 height: 10
+            },
+            {
+                drawMode: DrawMode.POLYGON,
+                drawModeOptions: {color: Math.random() * 16777216, fill: true},
+                points: [
+                    {x: 20, y: 1, z: 1},
+                    {x: 30, y: 10, z: 1},
+                    {x: 10, y: 10, z: 1}
+                ]
+                // width: 10,
+                // height: 10
+            },
+            {
+                drawMode: DrawMode.TEXT,
+                drawModeOptions: {color: Math.random() * 16777216, fill: true, font: "4x6", "fontPath": "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/rpi-led-matrix/fonts/4x6.bdf"},
+                points: {x: 30, y:16, z: 1},
+                text: "Hello!",
+                // width: 10,
+                // height: 10
             }
         ]);
 
         this.paint();
-
-        setTimeout(() => {this.randomColors();}, 100);
+        setTimeout(() => {this.randomColors();}, 5);
     }
 
 }

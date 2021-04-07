@@ -79,4 +79,4 @@ Add drawing facilities to alexeden/rpi-led-matrix.  Takes a declarative approach
                 layer: 6
             }
            </pre></code>
-           ![demo](/url "docs/demo.png")
+           ![demo](docs/demo.png)

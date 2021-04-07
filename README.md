@@ -1,7 +1,7 @@
 # rpi-led-matrix-painter
 Add drawing facilities to alexeden/rpi-led-matrix.  Takes a declarative approach to drawing on the matrix.  Manage sections of the board independently, draw shapes, text, images, and some simple effects.  Watch this space.  Check implementation branch for latest updates.
 <br><br>For example, the below TypeScript can be used to produce what's seen in the photo below.<br>
-<code><pre>
+```json
         const date: Date = new Date();
         const timeString: string = this.leadingZeroes(date.getHours(), 2) + ":" + this.leadingZeroes(date.getMinutes(), 2) + ":" + this.leadingZeroes(date.getSeconds(), 2) + "." + this.leadingZeroes(date.getMilliseconds(), 3);
         const dateString: string = date.getFullYear() + '-' + this.leadingZeroes(date.getMonth() + 1, 2) + '-' + this.leadingZeroes(date.getDate(), 2);
@@ -78,5 +78,5 @@ Add drawing facilities to alexeden/rpi-led-matrix.  Takes a declarative approach
                 text: dateString,
                 layer: 6
             }
-           </pre></code>
+           ```
            ![demo](docs/demo.png)

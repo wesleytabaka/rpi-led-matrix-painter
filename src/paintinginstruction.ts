@@ -9,5 +9,7 @@ export interface PaintingInstruction {
     width?: number,
     height?: number,
     layer?: number,
-    text?: string
+    text?: string,
+    imagePath?: string,
+    buffer?: Buffer
 }

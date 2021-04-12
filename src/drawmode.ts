@@ -4,5 +4,7 @@ export enum DrawMode {
     CIRCLE = "CIRCLE",
     ELLIPSE = "ELLIPSE",
     PIXEL = "PIXEL",
-    TEXT = "TEXT"
+    TEXT = "TEXT",
+    IMAGE = "IMAGE",
+    BUFFER = "BUFFER"
 }

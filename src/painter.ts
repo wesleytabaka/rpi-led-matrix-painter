@@ -5,15 +5,24 @@ import { DrawMode } from "./drawmode";
 import { DrawModeOption } from "./drawmodeoption";
 import { PaintingInstruction } from "./paintinginstruction";
 import { Point } from "./point";
+import * as fs from "fs";
+import { EffectType } from "./effecttype";
+import { Effect } from ".";
+import { Image } from "./image";
+import Jimp from "jimp";
+import * as crypto from "crypto";
+
 export class Painter {
     private canvas: Canvas;
     private matrix: matrix.LedMatrixInstance;
     private fontCache: matrix.FontInstance[];
+    private imageCache: Image[];
 
     constructor(matrixOptions: matrix.MatrixOptions, runtimeOptions: matrix.RuntimeOptions){
         this.canvas = new Canvas(matrixOptions, runtimeOptions); // May come in handy for display size, etc.
         this.matrix = new matrix.LedMatrix(matrixOptions, runtimeOptions);
         this.fontCache = [] as matrix.FontInstance[];
+        this.imageCache = [] as Image[];
     }
 
     public getCanvas(): Canvas{
@@ -32,21 +41,127 @@ export class Painter {
         return cachedFont;
     }
 
+    public getImageInstance(imagePath: string): Promise<Image> {
+        return new Promise<Image>((resolve, reject) => {
+            let cachedImage = this.imageCache.find((image: Image) => {
+                return image.path == imagePath;
+            });
+            if(cachedImage != undefined){
+                resolve(cachedImage);
+            }
+            if(cachedImage == undefined){
+                let content: number[][];
+                Jimp.read(imagePath)
+                    .then((res: Jimp) => {
+                        console.log("Jimp.read resolved");
+                        let width = res.getWidth();
+                        let height = res.getHeight();
+                        content = Array(width);
+                        console.log("width", width);
+                        for(let x = 1; x <= width; x++){
+                            content[x - 1] = Array(height);
+                            for(let y = 1; y <= width; y++){
+                                // let color: number = res.getPixelColor(x, y);
+                                content[x - 1][y - 1] = (res.getPixelColor(x, y) >>> 8); // Truncate alpha component by shifting two bits to the right.
+                            }
+                        }
+                        cachedImage = {
+                            path: imagePath,
+                            width: width,
+                            height: height,
+                            content: content
+                        } as Image;
+    
+                        this.imageCache.push(cachedImage);
+                        // console.log(cachedImage);
+                        resolve(cachedImage);
+                    }, (rej: any) => {
+                        reject(rej);
+                        console.log("Error reading image.");
+                        throw Error("Error reading image.");
+                    });
+                //cachedImage = {path: imagePath, content: fs.readFileSync(imagePath)} as Image;
+            }
+            // return cachedImage!;
+        });
+        
+    }
+
+    // public deleteImageInstance(imagePath: string): void {
+    //     this.imageCache.splice(this.imageCache.lastIndexOf(this.getImageInstance(imagePath)), 1);
+    // }
+
+    protected fillBlankCanvasSections(): void {
+        // TODO will probably have to come back here to fix multiple boards
+        /*
+        rows: 16 | 32 | 64
+        parallel: 1 | 2 | 3 | 4 (boards chained vertically / rows multiplier)
+        cols: 16 | 32 |40 | 64
+        chainlink: 1-8; // Roughly related to columns (boards chained horizontally / cols multiplier)
+        */
+        let width = this.matrix.width();
+        let height = this.matrix.height();
+        let map: boolean[][] = [[]];
+
+        for(let y = 0; y < height; y++){
+            map[y] = Array(width);
+            map[y].fill(false, 0, width);
+        }
+        
+
+        let sections: CanvasSection[] = this.getCanvas().getCanvasSections();
+
+        // TODO There's probably a better implementation for this, but for now...
+        // Loop through sections and mark all pixels that are touched.
+
+        this.matrix.fgColor(0x000000);
+
+        sections.forEach(section => {
+            for(let y = section.y; y < section.y + section.height; y++){
+                map[y].fill(true, section.x, section.x + section.width);
+                // for(let x = section.x; x < section.x + section.width; x++){
+                //     this.matrix.setPixel(x, y);
+                // }
+            }
+        });
+
+        for(let y = 0; y < height; y++){
+            for(let x = 0; x < width; x++){
+                if(!map[y][x]){
+                    this.matrix.setPixel(x, y);
+                }
+            }
+        }
+
+    }
+
     protected paint(): void {
+        // How can I crop the CanvasSection if there's overflow?
+        // How about before we draw each CanvasSection we do a fill with black on the section?  It would work for the next section being drawn...
+        // In other words, if there are empty portions of the canvas, we should fill them in with black as well.  Some clever maths will help.
         this.matrix.clear();
-        this.getCanvas().getCanvasSections().forEach((canvasSection: CanvasSection) => {
+        this.getCanvas().getCanvasSections().sort((a, b) => {return a.z - b.z;}).forEach((canvasSection: CanvasSection) => {
+            // Blank out the CanvasSection.
+            this.matrix.fgColor(0x000000);
+            this.matrix.fill(canvasSection.x, canvasSection.y, canvasSection.x + canvasSection.width - 1, canvasSection.y + canvasSection.height - 1);
+            // this.matrix.sync();
+
+
+            
+
+
             canvasSection.get().representation.forEach(paintingInstruction => {
+                 
                 // Do stuff here.
                 switch (paintingInstruction.drawMode){
                     case DrawMode.RECTANGLE: {
-                        let x = (paintingInstruction.points as Point).x;
-                        let y = (paintingInstruction.points as Point).y;
+                        let x = (paintingInstruction.points as Point).x + canvasSection.x;
+                        let y = (paintingInstruction.points as Point).y + canvasSection.y;
                         let width = paintingInstruction.width as number;
                         let height = paintingInstruction.height as number;
                         let color = paintingInstruction.drawModeOptions.color;
                         let fill = paintingInstruction.drawModeOptions.fill || false;
-                        // console.log("color", color);
-                        this.matrix.fgColor(color);
+                        this.matrix.fgColor(color!);
                         if(fill){
                             this.matrix.drawFilledRect(x, y, width, height);
                         }
@@ -56,12 +171,12 @@ export class Painter {
                         break;
                     }
                     case DrawMode.CIRCLE: {
-                        let x = (paintingInstruction.points as Point).x;
-                        let y = (paintingInstruction.points as Point).y;
+                        let x = (paintingInstruction.points as Point).x + canvasSection.x;
+                        let y = (paintingInstruction.points as Point).y + canvasSection.y;
                         let r = (paintingInstruction.width as number) / 2;
                         let color = paintingInstruction.drawModeOptions.color;
                         let fill = paintingInstruction.drawModeOptions.fill || false;
-                        this.matrix.fgColor(color); 
+                        this.matrix.fgColor(color!); 
                         if(fill){
                             this.matrix.drawFilledCircle(x, y, r);
                         }
@@ -77,71 +192,164 @@ export class Painter {
                     case DrawMode.POLYGON: {
                         // console.error("Not implemented.");
                         let color = paintingInstruction.drawModeOptions.color;
-
+                        let fill = paintingInstruction.drawModeOptions.fill || false;
                         let coordinateArray: number[] = [];
                         (paintingInstruction.points as Point[]).forEach((point: Point) => {
-                            coordinateArray.push(point.x);
-                            coordinateArray.push(point.y);
+                            coordinateArray.push(point.x + canvasSection.x);
+                            coordinateArray.push(point.y + canvasSection.y);
                         });
-                        this.matrix.fgColor(color);
-                        this.matrix.drawPolygon(coordinateArray);
+                        this.matrix.fgColor(color!);
+                        if(fill){
+                            this.matrix.drawFilledPolygon(coordinateArray);
+                        }
+                        else {
+                            this.matrix.drawPolygon(coordinateArray);
+                        }
+                        
                         break;
                     }
                     case DrawMode.PIXEL: {
-                        //this.matrix.fill();
-                        // this.matrix.setPixel()
-                        console.error("Not implemented.");
+                        this.matrix.fgColor(paintingInstruction.drawModeOptions.color!);
+                        (paintingInstruction.points as Point[]).forEach((point: Point) => {
+                            this.matrix.setPixel(point.x + canvasSection.x, point.y + canvasSection.y);
+                        });
                         break;
                     }
                     case DrawMode.TEXT: {
                         let text = (paintingInstruction.text as string);
-                        let x = (paintingInstruction.points as Point).x;
-                        let y = (paintingInstruction.points as Point).y;
+                        let x = (paintingInstruction.points as Point).x + canvasSection.x;
+                        let y = (paintingInstruction.points as Point).y + canvasSection.y;
                         let color = (paintingInstruction.drawModeOptions.color);
                         let font = this.getFontInstance((((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).font as string), (((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).fontPath as string));
+                        let width = font.stringWidth(text);
+
+
+
+                        // let scrollEffect = paintingInstruction.drawModeOptions.effects?.find(effects => {
+                        //     return effects.effectType == EffectType.SCROLLLEFT || effects.effectType == EffectType.SCROLLRIGHT || effects.effectType == EffectType.SCROLLUP || effects.effectType == EffectType.SCROLLDOWN;
+                        // });
+                        // if(scrollEffect != undefined){
+                        //     let currentInstruction = this.getCurrentInstruction(crypto.createHash("sha1").update(JSON.stringify(paintingInstruction)).digest().toString())!;
+                        //     switch(scrollEffect.effectType){
+                        //         case EffectType.SCROLLLEFT: {
+                        //             x = x - scrollEffect.effectOptions.rate;
+                        //             currentInstruction.x = x;
+                        //             break;
+                        //         }
+                        //         case EffectType.SCROLLRIGHT: {
+                        //             x = x + scrollEffect.effectOptions.rate;
+                        //             currentInstruction.x = x;
+                        //             break;
+                        //         }
+                        //         case EffectType.SCROLLUP: {
+                        //             y = y - scrollEffect.effectOptions.rate;
+                        //             currentInstruction.y = y;
+                        //             break;
+                        //         }
+                        //         case EffectType.SCROLLDOWN: {
+                        //             y = y + scrollEffect.effectOptions.rate;
+                        //             currentInstruction.y = y;
+                        //             break;
+                        //         }
+                        //         default: {
+                        //             break;
+                        //         }
+                        //     }
+                        // }
                         this.matrix.font(font);
-                        this.matrix.fgColor(color);
+                        this.matrix.fgColor(color!);
                         this.matrix.drawText(text, x, y);
                         break;
                     }
+                    case DrawMode.IMAGE: {
+                        // let path = paintingInstruction.imagePath;
+                        // let image = this.getImageInstance(path!); // TODO do this better.
+                        // this.matrix.
+                        // this.matrix.drawBuffer(image.content);
+                        // break;
+
+                        // Actually, there's no facility with DrawBuffer to specifiy where on the screen the buffer starts.
+                        // Loop through image points and use SetPixel instead.
+                        this.getImageInstance(paintingInstruction.imagePath!)
+                            .then((res: Image) => {
+                                let imageInstance: Image = res;
+                                let x = (paintingInstruction.points as Point).x + canvasSection.x;
+                                let y = (paintingInstruction.points as Point).y + canvasSection.y;
+
+                                // console.log(imageInstance.content.length);
+
+                                // console.log(imageInstance);
+
+                                for(let img_y = 0; img_y < imageInstance.height; img_y++){
+                                    for(let img_x = 0; img_x < imageInstance.width; img_x++){
+                                        this.matrix.fgColor(imageInstance.content[img_x][img_y]);
+                                        // this.matrix.fgColor(0xFFFFFF);
+                                        this.matrix.setPixel(x + img_x, y + img_y);
+                                        // console.log(x + img_x, y + img_y);
+                                    }
+                                }
+                                this.matrix.sync();
+                            }, (rej) => {
+                                console.log(rej);
+                            });
+                            break;
+                    }
+                    // case DrawMode.BUFFER: {
+                    //     this.matrix.drawBuffer(paintingInstruction.buffer!, paintingInstruction.width!, paintingInstruction.height!); // TODO better definition.
+                    // }
                 }
             });
+            // Debugging...
+            // this.matrix.fgColor(0x00FF00); // Draw bound on CanvasSection
+            // this.matrix.setPixel(canvasSection.x, canvasSection.y);
+            // this.matrix.setPixel(canvasSection.x + canvasSection.width - 1, canvasSection.y);
+            // this.matrix.setPixel(canvasSection.x + canvasSection.width - 1, canvasSection.y + canvasSection.height - 1);
+            // this.matrix.setPixel(canvasSection.x, canvasSection.y + canvasSection.height - 1);
         });
+
+        
+        this.fillBlankCanvasSections();
         this.matrix.sync();
     }
 
 
     public test(): void {
 
-        let canvasSection = new CanvasSection(1, 1, 1, 10, 10, [
-                {
-                    drawMode: DrawMode.RECTANGLE,
-                    drawModeOptions: {color: 0xFF0000},
-                    points: {x: 1, y: 1, z: 1},
-                    width: 10,
-                    height: 10
-                },
-                {
-                    drawMode: DrawMode.CIRCLE,
-                    drawModeOptions: {color: 0x00FF00},
-                    points: {x: 1, y: 1, z: 1},
-                    width: 10,
-                    height: 10
-                },
-                {
-                    drawMode: DrawMode.POLYGON,
-                    drawModeOptions: {color: 0x00FF00},
-                    points: [
-                        {x: 20, y: 1, z: 1},
-                        {x: 30, y: 10, z: 1},
-                        {x: 10, y: 10, z: 1}
-                    ]
-                    // width: 10,
-                    // height: 10
-                }
-        ], true, 1, "status");
+        let canvasSection = new CanvasSection(0, 0, 1, 73, 13, [ // Actual width is 59.
+                // {
+                //     drawMode: DrawMode.RECTANGLE,
+                //     drawModeOptions: {color: 0xFF0000},
+                //     points: {x: 1, y: 1, z: 1},
+                //     width: 10,
+                //     height: 10
+                // },
+                // {
+                //     drawMode: DrawMode.CIRCLE,
+                //     drawModeOptions: {color: 0x00FF00},
+                //     points: {x: 1, y: 1, z: 1},
+                //     width: 10,
+                //     height: 10
+                // },
+                // {
+                //     drawMode: DrawMode.POLYGON,
+                //     drawModeOptions: {color: 0x00FF00},
+                //     points: [
+                //         {x: 20, y: 1, z: 1},
+                //         {x: 29, y: 10, z: 1},
+                //         {x: 11, y: 10, z: 1}
+                //     ]
+                //     // width: 10,
+                //     // height: 10
+                // }
+        ], true, 1, "clock");
 
         this.getCanvas().addCanvasSection(canvasSection);
+
+        this.getCanvas().addCanvasSection(new CanvasSection(0, 16, 2, 27, 7, [], true, 2, "icons"));
+
+        this.getCanvas().addCanvasSection(new CanvasSection(45, 0, 0, 32, 32, [], true, 3, "bottomlayer")); // Try to overlap with clock.
+
+        this.getCanvas().addCanvasSection(new CanvasSection(96, 0, 3, 32, 32, [], true, 4, "image"));
         
         this.paint();
 
@@ -149,42 +357,283 @@ export class Painter {
 
     }
 
-    private randomColors(): void {
-        this.getCanvas().getCanvasSection("status")?.setRepresentation([
+    private leadingZeroes(num: number, digits: number): string {
+        return ("0".repeat(digits) + num.toString()).substr(num.toString().length, digits + 1);
+    }
+
+    public randomColors(): void {
+        const date: Date = new Date();
+        const timeString: string = this.leadingZeroes(date.getHours(), 2) + ":" + this.leadingZeroes(date.getMinutes(), 2) + ":" + this.leadingZeroes(date.getSeconds(), 2) + "." + this.leadingZeroes(date.getMilliseconds(), 3);
+        const dateString: string = date.getFullYear() + '-' + this.leadingZeroes(date.getMonth() + 1, 2) + '-' + this.leadingZeroes(date.getDate(), 2);
+        this.getCanvas().getCanvasSection("clock")?.setRepresentation([
             {
-                drawMode: DrawMode.RECTANGLE,
-                drawModeOptions: {color: Math.random() * 16777216, fill: true},
-                points: {x: 1, y: 1, z: 1},
-                width: 10,
-                height: 10
-            },
-            {
-                drawMode: DrawMode.CIRCLE,
-                drawModeOptions: {color: Math.random() * 16777216, fill: true},
-                points: {x: 1, y: 1, z: 1},
-                width: 10,
-                height: 10
-            },
-            {
+                drawMode: DrawMode.TEXT,
+                drawModeOptions: {color: 0x800000, fill: true, font: "5x7", "fontPath": "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/rpi-led-matrix/fonts/5x7.bdf"},
+                points: {x: 0, y:0, z: 1},
+                text: timeString,
+                layer: 5
+                // width: 10,
+                // height: 10
+            }, {
+                drawMode: DrawMode.TEXT,
+                drawModeOptions: {color: 0x800000, fill: false, font: "4x6", "fontPath": "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/rpi-led-matrix/fonts/4x6.bdf"},
+                points: {x: 0, y: 8, z: 1},
+                text: dateString,
+                layer: 6
+                // width: 10,
+                // height: 10
+            }]);
+            // {
+            //     drawMode: DrawMode.RECTANGLE,
+            //     drawModeOptions: {color: Math.random() * 16777216, fill: true},
+            //     points: {x: 1, y: 1, z: 1},
+            //     width: 10,
+            //     height: 10,
+            //     layer: 1
+            // }, {
+            //     drawMode: DrawMode.CIRCLE,
+            //     drawModeOptions: {color: Math.random() * 16777216, fill: true},
+            //     points: {x: 7, y: 18, z: 1},
+            //     width: 10,
+            //     height: 10,
+            //     layer: 2
+            // }, 
+            // {
+            //     drawMode: DrawMode.POLYGON,
+            //     drawModeOptions: {color: 0x800000, fill: true},
+            //     points: [
+            //         {x: 20, y: 17, z: 1},
+            //         {x: 29, y: 26, z: 1},
+            //         {x: 11, y: 26, z: 1}
+            //     ],
+            //     layer: 3
+            //     // width: 10,
+            //     // height: 10
+            // },
+	    // // Star:
+	
+        //     {
+        //         drawMode: DrawMode.POLYGON,
+        //         drawModeOptions: {color: 0x808000, fill: true},
+        //         points: [
+        //             // {x: 40, y: 16, z: 1},
+        //             // {x: 41, y: 17, z: 1},
+        //             // {x: 43, y: 18, z: 1},
+        //             // {x: 41, y: 20, z: 1},
+        //             // {x: 42, y: 22, z: 1},
+        //             // {x: 40, y: 21, z: 1},
+        //             // {x: 38, y: 22, z: 1},
+        //             // {x: 39, y: 20, z: 1},
+        //             // {x: 37, y: 18, z: 1},
+        //             // {x: 39, y: 18, z: 1}
+        //             {x: 40, y: 17, z: 0},
+        //             {x: 41, y: 19, z: 0},
+        //             {x: 43, y: 19, z: 0},
+        //             {x: 41, y: 21, z: 0},
+        //             {x: 42, y: 23, z: 0},
+        //             {x: 40, y: 22, z: 0},
+        //             {x: 38, y: 23, z: 0},
+        //             {x: 39, y: 21, z: 0},
+        //             {x: 37, y: 19, z: 0},
+        //             {x: 39, y: 19, z: 0}
+        //         ],
+        //         layer: 3
+        //         // width: 10,
+        //         // height: 10
+	    // },
+	
+		
+        //     // Green check mark.
+        //     {
+        //         drawMode: DrawMode.POLYGON,
+        //         drawModeOptions: {color: 0x008000, fill: true},
+        //         points: [
+        //             {x: 20, y: 17, z: 1},
+        //             {x: 22, y: 19, z: 1},
+        //             {x: 14, y: 27, z: 1},
+        //             {x: 10, y: 23, z: 1},
+        //             {x: 12, y: 21, z: 1},
+        //             {x: 14, y: 23, z: 1}
+        //         ],
+        //         layer: 3
+        //         // width: 10,
+        //         // height: 10
+        //     },
+
+        //     // Fractional slope polygon
+        //     {
+        //         drawMode: DrawMode.POLYGON,
+        //         drawModeOptions: {color: 0x000080, fill: true},
+        //         points: [
+        //             {x: 2, y: 2, z: 1},
+        //             {x: 4, y: 11, z: 1},
+        //             {x: 0, y: 11, z: 1}
+        //         ],
+        //         layer: 4
+        //     },
+        //     // Polygon with flat line
+        //     {
+        //         drawMode: DrawMode.POLYGON,
+        //         drawModeOptions: {color: 0x804000, fill: true},
+        //         points: [
+        //             {x: 0, y: 16, z: 1},
+        //             {x: 4, y: 16, z: 1},
+        //             {x: 6, y: 12, z: 1},
+        //             {x: 8, y: 16, z: 1},
+        //             {x: 6, y: 20, z: 1}
+        //         ],
+        //         layer: 4
+        //     },
+        //     // Rectangle polygon
+        //     {
+        //         drawMode: DrawMode.POLYGON,
+        //         drawModeOptions: {color: 0x800080, fill: true},
+        //         points: [
+        //             {x: 46, y: 16, z: 1},
+        //             {x: 52, y: 16, z: 1},
+        //             {x: 52, y: 28, z: 1},
+        //             {x: 46, y: 28, z: 1}
+        //         ],
+        //         layer: 4
+        //     },
+        this.getCanvas().getCanvasSection("icons")?.setRepresentation([
+            // Red "X"
+            { //x -4, y -16
                 drawMode: DrawMode.POLYGON,
-                drawModeOptions: {color: Math.random() * 16777216, fill: true},
+                drawModeOptions: {color: 0x800000, fill: true, },
                 points: [
-                    {x: 20, y: 1, z: 1},
-                    {x: 30, y: 10, z: 1},
-                    {x: 10, y: 10, z: 1}
-                ]
+                    {x: 1, y: 0, z: 1}, // 
+                    {x: 3, y: 2, z: 1}, //
+                    {x: 5, y: 0, z: 1}, //
+                    {x: 6, y: 1, z: 1},
+                    {x: 4, y: 3, z: 1},
+                    {x: 6, y: 5, z: 1},
+                    {x: 5, y: 6, z: 1},
+                    {x: 3, y: 4, z: 1},
+                    {x: 1, y: 6, z: 1},
+                    {x: 0, y: 5, z: 1},
+                    {x: 2, y: 3, z: 1},
+                    {x: 0, y: 1, z: 1}
+                ],
+                layer: 5
                 // width: 10,
                 // height: 10
             },
+            // Smaller check mark
+            // -4, -16
             {
-                drawMode: DrawMode.TEXT,
-                drawModeOptions: {color: Math.random() * 16777216, fill: true, font: "4x6", "fontPath": "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/rpi-led-matrix/fonts/4x6.bdf"},
-                points: {x: 30, y:16, z: 1},
-                text: "Hello!",
+                drawMode: DrawMode.POLYGON,
+                drawModeOptions: {color: 0x008000, fill: true, },
+                points: [
+                    {x: 9, y: 3, z: 1},
+                    {x: 10, y: 4, z: 1},
+                    {x: 14, y: 0, z: 1},
+                    {x: 15, y: 1, z: 1},
+                    {x: 10, y: 6, z: 1},
+                    {x: 8, y: 4, z: 1}
+                ],
+                layer: 5
+                // width: 10,
+                // height: 10
+            },
+
+            // Warning triangle
+            // -4, -16
+            {
+                drawMode: DrawMode.POLYGON,
+                drawModeOptions: {color: 0x805000, fill: true, },
+                points: [
+                    {x: 22, y: 0, z: 1},
+                    {x: 26, y: 6, z: 1},
+                    {x: 18, y: 6, z: 1}
+                ],
+                layer: 5
+                // width: 10,
+                // height: 10
+            },
+            // Exclamation mark for warning triangle
+            // -4, -16
+            {
+                drawMode: DrawMode.PIXEL,
+                drawModeOptions: {color: 0x000000},
+                points: [
+                    {x: 22, y: 2, z: 1},
+                    {x: 22, y: 3, z: 1},
+                    {x: 22, y: 5, z: 1}
+                ],
+                layer: 5
                 // width: 10,
                 // height: 10
             }
+
+
+            //  {
+            //     drawMode: DrawMode.TEXT,
+            //     drawModeOptions: {color: Math.random() * 16777216, fill: true, font: "4x6", "fontPath": "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/rpi-led-matrix/fonts/4x6.bdf"},
+            //     points: {x: 30, y:16, z: 1},
+            //     text: "Hello!",
+            //     layer: 4
+            //     // width: 10,
+            //     // height: 10
+            // }, 
+            // {
+            //     drawMode: DrawMode.TEXT,
+            //     drawModeOptions: {
+            //         color: 0x008000, 
+            //         fill: false, 
+            //         font: "4x6", 
+            //         "fontPath": "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/rpi-led-matrix/fonts/4x6.bdf"
+            //         // effects: [new Effect(EffectType.SCROLLLEFT, {rate: 1})]
+            //     },
+            //     points: {x: 64, y: 24, z: 1},
+            //     text: "Hello world!",
+            //     layer: 6
+            // }
+            // Raspberry Pi temperature readout.
+            // ,
+            // {
+            //     drawMode: DrawMode.TEXT,
+            //     drawModeOptions: {color: 0x800000, fill: false, font: "4x6", "fontPath": "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/rpi-led-matrix/fonts/4x6.bdf"},
+            //     points: {x: 25, y: 8, z: 1},
+            //     text: this.temp,
+            //     layer: 7
+            // }
+            // {
+            //     drawMode: DrawMode.BUFFER,
+            //     drawModeOptions: {},
+            //     points: {x: 1, y: 1, z: 1},
+            //     // imagePath: "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/rpi-led-matrix/docs/demo-thumbnail.png"
+            //     buffer: Buffer.from("ff0000", "hex"),
+            //     height: 1,
+            //     width: 1
+            // }
         ]);
+
+        this.getCanvas().getCanvasSection("bottomlayer")?.setRepresentation([
+            {
+                drawMode: DrawMode.RECTANGLE,
+                drawModeOptions: {color: 0x000080, fill: true},
+                points: {x: 0, y: 0, z: 1},
+                width: 32,
+                height: 32,
+                layer: 5
+            }
+        ]);
+
+        this.getCanvas().getCanvasSection("image")?.setRepresentation([
+            {
+                drawMode: DrawMode.IMAGE,
+                drawModeOptions: {color: 0x000000, fill: false},
+                imagePath: "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/doggy.png",
+                points: {x: 0, y: 0, z: 0},
+                width: 32,
+                height: 32,
+                layer: 7
+                
+            }
+        ]);
+
+
 
         this.paint();
         setTimeout(() => {this.randomColors();}, 5);

@@ -1,7 +1,9 @@
+import { Effect } from ".";
+
 export interface DrawModeOption {
-    color: number,
+    color?: number,
     fill?: boolean,
     font?: string,
-    fontPath?: string
-    // fontSize?: number,
+    fontPath?: string,
+    effects?: [Effect]
 }

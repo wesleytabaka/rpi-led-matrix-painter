@@ -1,19 +1,31 @@
 import { Canvas } from "./canvas";
+import { CanvasSection } from "./canvassection";
+import { DrawMode } from "./drawmode";
+import { DrawModeOption } from "./drawmodeoption";
+import { Effect } from "./effect";
+import { EffectOptions } from "./effectoptions";
+import { EffectType } from "./effecttype";
 import { Painter } from "./painter";
+import { PaintingInstruction } from "./paintinginstruction";
+import { Point } from "./point";
 import * as matrix from "../rpi-led-matrix"
 
-const painter = new Painter(
-    {
-        ...matrix.LedMatrix.defaultMatrixOptions(),
-        rows: 32,
-        cols: 64,
-        chainLength: 1
-    },
-    {
-        ...matrix.LedMatrix.defaultRuntimeOptions()
-    }
-);
+ const painter = new Painter(
+     {
+         ...matrix.LedMatrix.defaultMatrixOptions(),
+         rows: 32,
+         cols: 64,
+         chainLength: 2,
+        
+     },
+     {
+         ...matrix.LedMatrix.defaultRuntimeOptions(),
+         gpioSlowdown: 4
+     }
+ );
 
-painter.test();
+let matrix_export = matrix.LedMatrix
 
-export { Canvas, Painter };
+ painter.test();
+
+export { Canvas, CanvasSection, DrawMode, DrawModeOption, Effect, EffectOptions, EffectType, Painter, PaintingInstruction, Point, matrix_export as Matrix };

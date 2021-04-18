@@ -53,16 +53,13 @@ export class Painter {
                 let content: number[][];
                 Jimp.read(imagePath)
                     .then((res: Jimp) => {
-                        console.log("Jimp.read resolved");
                         let width = res.getWidth();
                         let height = res.getHeight();
                         content = Array(width);
-                        console.log("width", width);
                         for(let x = 1; x <= width; x++){
                             content[x - 1] = Array(height);
                             for(let y = 1; y <= width; y++){
-                                // let color: number = res.getPixelColor(x, y);
-                                content[x - 1][y - 1] = (res.getPixelColor(x, y) >>> 8); // Truncate alpha component by shifting two bits to the right.
+                                content[x - 1][y - 1] = (res.getPixelColor(x, y) >>> 0); // Convert to unsigned 32-bit int.
                             }
                         }
                         cachedImage = {
@@ -73,32 +70,19 @@ export class Painter {
                         } as Image;
     
                         this.imageCache.push(cachedImage);
-                        // console.log(cachedImage);
                         resolve(cachedImage);
                     }, (rej: any) => {
                         reject(rej);
                         console.log("Error reading image.");
                         throw Error("Error reading image.");
                     });
-                //cachedImage = {path: imagePath, content: fs.readFileSync(imagePath)} as Image;
             }
-            // return cachedImage!;
         });
         
     }
 
-    // public deleteImageInstance(imagePath: string): void {
-    //     this.imageCache.splice(this.imageCache.lastIndexOf(this.getImageInstance(imagePath)), 1);
-    // }
-
     protected fillBlankCanvasSections(): void {
         // TODO will probably have to come back here to fix multiple boards
-        /*
-        rows: 16 | 32 | 64
-        parallel: 1 | 2 | 3 | 4 (boards chained vertically / rows multiplier)
-        cols: 16 | 32 |40 | 64
-        chainlink: 1-8; // Roughly related to columns (boards chained horizontally / cols multiplier)
-        */
         let width = this.matrix.width();
         let height = this.matrix.height();
         let map: boolean[][] = [[]];
@@ -119,9 +103,6 @@ export class Painter {
         sections.forEach(section => {
             for(let y = section.y; y < section.y + section.height; y++){
                 map[y].fill(true, section.x, section.x + section.width);
-                // for(let x = section.x; x < section.x + section.width; x++){
-                //     this.matrix.setPixel(x, y);
-                // }
             }
         });
 
@@ -147,9 +128,7 @@ export class Painter {
             // this.matrix.sync();
 
 
-            
-
-
+            // TODO Use promise.all() so we know everything's been drawn to the screen.
             canvasSection.get().representation.forEach(paintingInstruction => {
                  
                 // Do stuff here.
@@ -190,7 +169,6 @@ export class Painter {
                         break;
                     }
                     case DrawMode.POLYGON: {
-                        // console.error("Not implemented.");
                         let color = paintingInstruction.drawModeOptions.color;
                         let fill = paintingInstruction.drawModeOptions.fill || false;
                         let coordinateArray: number[] = [];
@@ -223,69 +201,26 @@ export class Painter {
                         let font = this.getFontInstance((((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).font as string), (((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).fontPath as string));
                         let width = font.stringWidth(text);
 
-
-
-                        // let scrollEffect = paintingInstruction.drawModeOptions.effects?.find(effects => {
-                        //     return effects.effectType == EffectType.SCROLLLEFT || effects.effectType == EffectType.SCROLLRIGHT || effects.effectType == EffectType.SCROLLUP || effects.effectType == EffectType.SCROLLDOWN;
-                        // });
-                        // if(scrollEffect != undefined){
-                        //     let currentInstruction = this.getCurrentInstruction(crypto.createHash("sha1").update(JSON.stringify(paintingInstruction)).digest().toString())!;
-                        //     switch(scrollEffect.effectType){
-                        //         case EffectType.SCROLLLEFT: {
-                        //             x = x - scrollEffect.effectOptions.rate;
-                        //             currentInstruction.x = x;
-                        //             break;
-                        //         }
-                        //         case EffectType.SCROLLRIGHT: {
-                        //             x = x + scrollEffect.effectOptions.rate;
-                        //             currentInstruction.x = x;
-                        //             break;
-                        //         }
-                        //         case EffectType.SCROLLUP: {
-                        //             y = y - scrollEffect.effectOptions.rate;
-                        //             currentInstruction.y = y;
-                        //             break;
-                        //         }
-                        //         case EffectType.SCROLLDOWN: {
-                        //             y = y + scrollEffect.effectOptions.rate;
-                        //             currentInstruction.y = y;
-                        //             break;
-                        //         }
-                        //         default: {
-                        //             break;
-                        //         }
-                        //     }
-                        // }
                         this.matrix.font(font);
                         this.matrix.fgColor(color!);
                         this.matrix.drawText(text, x, y);
                         break;
                     }
                     case DrawMode.IMAGE: {
-                        // let path = paintingInstruction.imagePath;
-                        // let image = this.getImageInstance(path!); // TODO do this better.
-                        // this.matrix.
-                        // this.matrix.drawBuffer(image.content);
-                        // break;
-
-                        // Actually, there's no facility with DrawBuffer to specifiy where on the screen the buffer starts.
-                        // Loop through image points and use SetPixel instead.
+                        // Loop through image points and use SetPixel.
                         this.getImageInstance(paintingInstruction.imagePath!)
                             .then((res: Image) => {
+                                
                                 let imageInstance: Image = res;
                                 let x = (paintingInstruction.points as Point).x + canvasSection.x;
                                 let y = (paintingInstruction.points as Point).y + canvasSection.y;
 
-                                // console.log(imageInstance.content.length);
-
-                                // console.log(imageInstance);
-
                                 for(let img_y = 0; img_y < imageInstance.height; img_y++){
                                     for(let img_x = 0; img_x < imageInstance.width; img_x++){
-                                        this.matrix.fgColor(imageInstance.content[img_x][img_y]);
-                                        // this.matrix.fgColor(0xFFFFFF);
-                                        this.matrix.setPixel(x + img_x, y + img_y);
-                                        // console.log(x + img_x, y + img_y);
+                                        if((imageInstance.content[img_x][img_y] & 0x000000FF) != 0){ // Alpha 0 is not drawn.
+                                            this.matrix.fgColor(imageInstance.content[img_x][img_y] >>> 8);
+                                            this.matrix.setPixel(x + img_x, y + img_y);
+                                        }
                                     }
                                 }
                                 this.matrix.sync();
@@ -349,7 +284,8 @@ export class Painter {
 
         this.getCanvas().addCanvasSection(new CanvasSection(45, 0, 0, 32, 32, [], true, 3, "bottomlayer")); // Try to overlap with clock.
 
-        this.getCanvas().addCanvasSection(new CanvasSection(96, 0, 3, 32, 32, [], true, 4, "image"));
+        // this.getCanvas().addCanvasSection(new CanvasSection(96, 0, 3, 32, 32, [], true, 4, "image"));
+        this.getCanvas().addCanvasSection(new CanvasSection(0, 32, 3, 32, 32, [], true, 4, "image"));
         
         this.paint();
 
@@ -624,7 +560,7 @@ export class Painter {
             {
                 drawMode: DrawMode.IMAGE,
                 drawModeOptions: {color: 0x000000, fill: false},
-                imagePath: "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/doggy.png",
+                imagePath: "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/17529334_transparent.png",
                 points: {x: 0, y: 0, z: 0},
                 width: 32,
                 height: 32,

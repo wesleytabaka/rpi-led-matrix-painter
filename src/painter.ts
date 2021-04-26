@@ -5,24 +5,41 @@ import { DrawMode } from "./drawmode";
 import { DrawModeOption } from "./drawmodeoption";
 import { PaintingInstruction } from "./paintinginstruction";
 import { Point } from "./point";
-import * as fs from "fs";
 import { EffectType } from "./effecttype";
 import { Effect } from ".";
 import { Image } from "./image";
 import Jimp from "jimp";
-import * as crypto from "crypto";
+import { PaintingInstructionCache } from "./paintinginstructioncache";
 
 export class Painter {
     private canvas: Canvas;
     private matrix: matrix.LedMatrixInstance;
     private fontCache: matrix.FontInstance[];
     private imageCache: Image[];
+    private paintingInstructionCache: PaintingInstructionCache; // Handles effect updates
+    private startTime: Date;
+    private currentTime: Date;
+    private duration: number; // milliseconds
 
     constructor(matrixOptions: matrix.MatrixOptions, runtimeOptions: matrix.RuntimeOptions){
         this.canvas = new Canvas(matrixOptions, runtimeOptions); // May come in handy for display size, etc.
         this.matrix = new matrix.LedMatrix(matrixOptions, runtimeOptions);
         this.fontCache = [] as matrix.FontInstance[];
         this.imageCache = [] as Image[];
+        this.paintingInstructionCache = {} as PaintingInstructionCache;
+        this.startTime = new Date();
+        this.currentTime = new Date();
+        this.duration = this.currentTime.getTime() - this.startTime.getTime();
+    }
+
+    private tick(): void {
+        this.currentTime = new Date();
+        this.duration = this.currentTime.getTime() - this.startTime.getTime();
+    }
+
+    public resetClock(): void { // Use to start effects from "zero".
+        this.startTime = new Date();
+        this.tick();
     }
 
     public getCanvas(): Canvas{
@@ -120,6 +137,7 @@ export class Painter {
         // How can I crop the CanvasSection if there's overflow?
         // How about before we draw each CanvasSection we do a fill with black on the section?  It would work for the next section being drawn...
         // In other words, if there are empty portions of the canvas, we should fill them in with black as well.  Some clever maths will help.
+        this.tick();
         this.matrix.clear();
         this.getCanvas().getCanvasSections().sort((a, b) => {return a.z - b.z;}).forEach((canvasSection: CanvasSection) => {
             // Blank out the CanvasSection.
@@ -130,7 +148,10 @@ export class Painter {
 
             // TODO Use promise.all() so we know everything's been drawn to the screen.
             canvasSection.get().representation.forEach(paintingInstruction => {
-                 
+                if(this.paintingInstructionCache[paintingInstruction.id] == undefined){
+                    this.paintingInstructionCache[paintingInstruction.id] = paintingInstruction;
+                } 
+
                 // Do stuff here.
                 switch (paintingInstruction.drawMode){
                     case DrawMode.RECTANGLE: {
@@ -199,7 +220,53 @@ export class Painter {
                         let y = (paintingInstruction.points as Point).y + canvasSection.y;
                         let color = (paintingInstruction.drawModeOptions.color);
                         let font = this.getFontInstance((((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).font as string), (((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).fontPath as string));
-                        let width = font.stringWidth(text);
+                        let textwidth = font.stringWidth(text);
+                        let textheight = font.height();
+                        
+                        paintingInstruction.drawModeOptions.effects?.forEach((effect) => {
+                            switch(effect.effectType){
+                                case EffectType.SCROLLLEFT: {
+                                    if((this.paintingInstructionCache[paintingInstruction.id].points as Point).x + textwidth < canvasSection.x){
+                                        (this.paintingInstructionCache[paintingInstruction.id].points as Point).x = (paintingInstruction.points as Point).x + canvasSection.width; // Wrap text to right edge.
+                                    }
+                                    else {
+                                        (this.paintingInstructionCache[paintingInstruction.id].points as Point).x = x - ((this.duration / effect.effectOptions.rate) % (textwidth + canvasSection.width)) + canvasSection.width; // rate expressed as ms/pixel.
+                                    }
+                                    x = (this.paintingInstructionCache[paintingInstruction.id].points as Point).x;
+                                    break;
+                                }
+                                case EffectType.SCROLLRIGHT: {
+                                    if((this.paintingInstructionCache[paintingInstruction.id].points as Point).x > (canvasSection.x + canvasSection.width)){
+                                        (this.paintingInstructionCache[paintingInstruction.id].points as Point).x = (paintingInstruction.points as Point).x - (textwidth); // Wrap text to left edge.
+                                    }
+                                    else {
+                                        (this.paintingInstructionCache[paintingInstruction.id].points as Point).x = x + ((this.duration / effect.effectOptions.rate) % (textwidth + canvasSection.width)) - textwidth; // rate expressed as ms/pixel.
+                                    }
+                                    x = (this.paintingInstructionCache[paintingInstruction.id].points as Point).x;
+                                    break;
+                                }
+                                case EffectType.SCROLLUP: { 
+                                    if((this.paintingInstructionCache[paintingInstruction.id].points as Point).y < (canvasSection.y - canvasSection.height)){
+                                        (this.paintingInstructionCache[paintingInstruction.id].points as Point).y = (paintingInstruction.points as Point).y + (canvasSection.height); // Wrap text to left edge.
+                                    }
+                                    else {
+                                        (this.paintingInstructionCache[paintingInstruction.id].points as Point).y = y - ((this.duration / effect.effectOptions.rate) % (textheight + canvasSection.height)) + canvasSection.height; // rate expressed as ms/pixel.
+                                    }
+                                    y = (this.paintingInstructionCache[paintingInstruction.id].points as Point).y;
+                                    break;
+                                }
+                                case EffectType.SCROLLDOWN: {
+                                    if((this.paintingInstructionCache[paintingInstruction.id].points as Point).y > (canvasSection.y + canvasSection.height)){
+                                        (this.paintingInstructionCache[paintingInstruction.id].points as Point).y = (paintingInstruction.points as Point).y - (textheight); // Wrap text to left edge.
+                                    }
+                                    else {
+                                        (this.paintingInstructionCache[paintingInstruction.id].points as Point).y = y + ((this.duration / effect.effectOptions.rate) % (textheight + canvasSection.height)) - textheight; // rate expressed as ms/pixel.
+                                    }
+                                    y = (this.paintingInstructionCache[paintingInstruction.id].points as Point).y;
+                                    break;
+                                }
+                            }
+                        });
 
                         this.matrix.font(font);
                         this.matrix.fgColor(color!);
@@ -286,6 +353,8 @@ export class Painter {
 
         // this.getCanvas().addCanvasSection(new CanvasSection(96, 0, 3, 32, 32, [], true, 4, "image"));
         this.getCanvas().addCanvasSection(new CanvasSection(0, 32, 3, 32, 32, [], true, 4, "image"));
+
+        this.getCanvas().addCanvasSection(new CanvasSection(32, 32, 4, 32, 16, [], true, 5, "scrollTest"));
         
         this.paint();
 
@@ -303,6 +372,7 @@ export class Painter {
         const dateString: string = date.getFullYear() + '-' + this.leadingZeroes(date.getMonth() + 1, 2) + '-' + this.leadingZeroes(date.getDate(), 2);
         this.getCanvas().getCanvasSection("clock")?.setRepresentation([
             {
+                id: "time",
                 drawMode: DrawMode.TEXT,
                 drawModeOptions: {color: 0x800000, fill: true, font: "5x7", "fontPath": "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/rpi-led-matrix/fonts/5x7.bdf"},
                 points: {x: 0, y:0, z: 1},
@@ -311,6 +381,7 @@ export class Painter {
                 // width: 10,
                 // height: 10
             }, {
+                id: "date",
                 drawMode: DrawMode.TEXT,
                 drawModeOptions: {color: 0x800000, fill: false, font: "4x6", "fontPath": "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/rpi-led-matrix/fonts/4x6.bdf"},
                 points: {x: 0, y: 8, z: 1},
@@ -435,6 +506,7 @@ export class Painter {
         this.getCanvas().getCanvasSection("icons")?.setRepresentation([
             // Red "X"
             { //x -4, y -16
+                id: "x",
                 drawMode: DrawMode.POLYGON,
                 drawModeOptions: {color: 0x800000, fill: true, },
                 points: [
@@ -458,6 +530,7 @@ export class Painter {
             // Smaller check mark
             // -4, -16
             {
+                id: "checkmark",
                 drawMode: DrawMode.POLYGON,
                 drawModeOptions: {color: 0x008000, fill: true, },
                 points: [
@@ -476,6 +549,7 @@ export class Painter {
             // Warning triangle
             // -4, -16
             {
+                id: "triangle",
                 drawMode: DrawMode.POLYGON,
                 drawModeOptions: {color: 0x805000, fill: true, },
                 points: [
@@ -490,6 +564,7 @@ export class Painter {
             // Exclamation mark for warning triangle
             // -4, -16
             {
+                id: "exclamation",
                 drawMode: DrawMode.PIXEL,
                 drawModeOptions: {color: 0x000000},
                 points: [
@@ -501,6 +576,8 @@ export class Painter {
                 // width: 10,
                 // height: 10
             }
+
+
 
 
             //  {
@@ -547,6 +624,7 @@ export class Painter {
 
         this.getCanvas().getCanvasSection("bottomlayer")?.setRepresentation([
             {
+                id: "rectangle",
                 drawMode: DrawMode.RECTANGLE,
                 drawModeOptions: {color: 0x000080, fill: true},
                 points: {x: 0, y: 0, z: 1},
@@ -558,6 +636,7 @@ export class Painter {
 
         this.getCanvas().getCanvasSection("image")?.setRepresentation([
             {
+                id: "wesley",
                 drawMode: DrawMode.IMAGE,
                 drawModeOptions: {color: 0x000000, fill: false},
                 imagePath: "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/17529334_transparent.png",
@@ -566,6 +645,23 @@ export class Painter {
                 height: 32,
                 layer: 7
                 
+            }
+        ]);
+
+        this.getCanvas().getCanvasSection("scrollTest")?.setRepresentation([
+            {
+                id: "scrolltest",
+                drawMode: DrawMode.TEXT,
+                drawModeOptions: {
+                    color: 0xFFFFFF, 
+                    fill: false, 
+                    font: "4x6", 
+                    "fontPath": "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/rpi-led-matrix/fonts/4x6.bdf",
+                    effects: [new Effect(EffectType.SCROLLDOWN, {rate: 200})]
+                },
+                points: {x: 0, y: 0, z: 1},
+                text: timeString,
+                layer: 6
             }
         ]);
 

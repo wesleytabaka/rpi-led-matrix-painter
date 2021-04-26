@@ -1,3 +1,5 @@
+import 'source-map-support/register';
+
 import { Canvas } from "./canvas";
 import { CanvasSection } from "./canvassection";
 import { DrawMode } from "./drawmode";
@@ -22,7 +24,7 @@ const pixelMapperConfig = matrix.LedMatrixUtils.encodeMappers({"type": matrix.Pi
      },
      {
          ...matrix.LedMatrix.defaultRuntimeOptions(),
-         gpioSlowdown: 2
+         gpioSlowdown: 3
      }
  );
 

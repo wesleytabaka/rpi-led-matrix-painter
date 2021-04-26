@@ -25,5 +25,8 @@
   "homepage": "https://github.com/wesleytabaka/rpi-led-matrix-painter#readme",
   "dependencies": {
     "jimp": "^0.16.1"
+  },
+  "devDependencies": {
+    "source-map-support": "^0.5.19"
   }
 }

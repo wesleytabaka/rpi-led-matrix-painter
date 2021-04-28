@@ -139,167 +139,178 @@ export class Painter {
         // In other words, if there are empty portions of the canvas, we should fill them in with black as well.  Some clever maths will help.
         this.tick();
         this.matrix.clear();
+
+        let instructionPromises: Promise<PaintingInstruction>[] = [] as Promise<PaintingInstruction>[];
+
         this.getCanvas().getCanvasSections().sort((a, b) => {return a.z - b.z;}).forEach((canvasSection: CanvasSection) => {
             // Blank out the CanvasSection.
             this.matrix.fgColor(0x000000);
             this.matrix.fill(canvasSection.x, canvasSection.y, canvasSection.x + canvasSection.width - 1, canvasSection.y + canvasSection.height - 1);
             // this.matrix.sync();
 
-
             // TODO Use promise.all() so we know everything's been drawn to the screen.
             canvasSection.get().representation.forEach(paintingInstruction => {
-                if(this.paintingInstructionCache[paintingInstruction.id] == undefined){
-                    this.paintingInstructionCache[paintingInstruction.id] = paintingInstruction;
-                } 
+                instructionPromises.push(new Promise((resolve, reject) => {
+                    if(this.paintingInstructionCache[paintingInstruction.id] == undefined){
+                        this.paintingInstructionCache[paintingInstruction.id] = paintingInstruction;
+                    } 
 
-                // Do stuff here.
-                switch (paintingInstruction.drawMode){
-                    case DrawMode.RECTANGLE: {
-                        let x = (paintingInstruction.points as Point).x + canvasSection.x;
-                        let y = (paintingInstruction.points as Point).y + canvasSection.y;
-                        let width = paintingInstruction.width as number;
-                        let height = paintingInstruction.height as number;
-                        let color = paintingInstruction.drawModeOptions.color;
-                        let fill = paintingInstruction.drawModeOptions.fill || false;
-                        this.matrix.fgColor(color!);
-                        if(fill){
-                            this.matrix.drawFilledRect(x, y, width, height);
-                        }
-                        else {
-                            this.matrix.drawRect(x, y, width, height);
-                        }
-                        break;
-                    }
-                    case DrawMode.CIRCLE: {
-                        let x = (paintingInstruction.points as Point).x + canvasSection.x;
-                        let y = (paintingInstruction.points as Point).y + canvasSection.y;
-                        let r = (paintingInstruction.width as number) / 2;
-                        let color = paintingInstruction.drawModeOptions.color;
-                        let fill = paintingInstruction.drawModeOptions.fill || false;
-                        this.matrix.fgColor(color!); 
-                        if(fill){
-                            this.matrix.drawFilledCircle(x, y, r);
-                        }
-                        else {
-                            this.matrix.drawCircle(x, y, r);
-                        }
-                        break;
-                    }
-                    case DrawMode.ELLIPSE: {
-                        console.error("Not implemented.");
-                        break;
-                    }
-                    case DrawMode.POLYGON: {
-                        let color = paintingInstruction.drawModeOptions.color;
-                        let fill = paintingInstruction.drawModeOptions.fill || false;
-                        let coordinateArray: number[] = [];
-                        (paintingInstruction.points as Point[]).forEach((point: Point) => {
-                            coordinateArray.push(point.x + canvasSection.x);
-                            coordinateArray.push(point.y + canvasSection.y);
-                        });
-                        this.matrix.fgColor(color!);
-                        if(fill){
-                            this.matrix.drawFilledPolygon(coordinateArray);
-                        }
-                        else {
-                            this.matrix.drawPolygon(coordinateArray);
-                        }
-                        
-                        break;
-                    }
-                    case DrawMode.PIXEL: {
-                        this.matrix.fgColor(paintingInstruction.drawModeOptions.color!);
-                        (paintingInstruction.points as Point[]).forEach((point: Point) => {
-                            this.matrix.setPixel(point.x + canvasSection.x, point.y + canvasSection.y);
-                        });
-                        break;
-                    }
-                    case DrawMode.TEXT: {
-                        let text = (paintingInstruction.text as string);
-                        let x = (paintingInstruction.points as Point).x + canvasSection.x;
-                        let y = (paintingInstruction.points as Point).y + canvasSection.y;
-                        let color = (paintingInstruction.drawModeOptions.color);
-                        let font = this.getFontInstance((((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).font as string), (((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).fontPath as string));
-                        let textwidth = font.stringWidth(text);
-                        let textheight = font.height();
-                        
-                        paintingInstruction.drawModeOptions.effects?.forEach((effect) => {
-                            switch(effect.effectType){
-                                case EffectType.SCROLLLEFT: {
-                                    if((this.paintingInstructionCache[paintingInstruction.id].points as Point).x + textwidth < canvasSection.x){
-                                        (this.paintingInstructionCache[paintingInstruction.id].points as Point).x = (paintingInstruction.points as Point).x + canvasSection.width; // Wrap text to right edge.
-                                    }
-                                    else {
-                                        (this.paintingInstructionCache[paintingInstruction.id].points as Point).x = x - ((this.duration / effect.effectOptions.rate) % (textwidth + canvasSection.width)) + canvasSection.width; // rate expressed as ms/pixel.
-                                    }
-                                    x = (this.paintingInstructionCache[paintingInstruction.id].points as Point).x;
-                                    break;
-                                }
-                                case EffectType.SCROLLRIGHT: {
-                                    if((this.paintingInstructionCache[paintingInstruction.id].points as Point).x > (canvasSection.x + canvasSection.width)){
-                                        (this.paintingInstructionCache[paintingInstruction.id].points as Point).x = (paintingInstruction.points as Point).x - (textwidth); // Wrap text to left edge.
-                                    }
-                                    else {
-                                        (this.paintingInstructionCache[paintingInstruction.id].points as Point).x = x + ((this.duration / effect.effectOptions.rate) % (textwidth + canvasSection.width)) - textwidth; // rate expressed as ms/pixel.
-                                    }
-                                    x = (this.paintingInstructionCache[paintingInstruction.id].points as Point).x;
-                                    break;
-                                }
-                                case EffectType.SCROLLUP: { 
-                                    if((this.paintingInstructionCache[paintingInstruction.id].points as Point).y < (canvasSection.y - canvasSection.height)){
-                                        (this.paintingInstructionCache[paintingInstruction.id].points as Point).y = (paintingInstruction.points as Point).y + (canvasSection.height); // Wrap text to left edge.
-                                    }
-                                    else {
-                                        (this.paintingInstructionCache[paintingInstruction.id].points as Point).y = y - ((this.duration / effect.effectOptions.rate) % (textheight + canvasSection.height)) + canvasSection.height; // rate expressed as ms/pixel.
-                                    }
-                                    y = (this.paintingInstructionCache[paintingInstruction.id].points as Point).y;
-                                    break;
-                                }
-                                case EffectType.SCROLLDOWN: {
-                                    if((this.paintingInstructionCache[paintingInstruction.id].points as Point).y > (canvasSection.y + canvasSection.height)){
-                                        (this.paintingInstructionCache[paintingInstruction.id].points as Point).y = (paintingInstruction.points as Point).y - (textheight); // Wrap text to left edge.
-                                    }
-                                    else {
-                                        (this.paintingInstructionCache[paintingInstruction.id].points as Point).y = y + ((this.duration / effect.effectOptions.rate) % (textheight + canvasSection.height)) - textheight; // rate expressed as ms/pixel.
-                                    }
-                                    y = (this.paintingInstructionCache[paintingInstruction.id].points as Point).y;
-                                    break;
-                                }
+                    // Do stuff here.
+                    switch (paintingInstruction.drawMode){
+                        case DrawMode.RECTANGLE: {
+                            let x = (paintingInstruction.points as Point).x + canvasSection.x;
+                            let y = (paintingInstruction.points as Point).y + canvasSection.y;
+                            let width = paintingInstruction.width as number;
+                            let height = paintingInstruction.height as number;
+                            let color = paintingInstruction.drawModeOptions.color;
+                            let fill = paintingInstruction.drawModeOptions.fill || false;
+                            this.matrix.fgColor(color!);
+                            if(fill){
+                                this.matrix.drawFilledRect(x, y, width, height);
                             }
-                        });
+                            else {
+                                this.matrix.drawRect(x, y, width, height);
+                            }
+                            resolve(paintingInstruction);
+                            break;
+                        }
+                        case DrawMode.CIRCLE: {
+                            let x = (paintingInstruction.points as Point).x + canvasSection.x;
+                            let y = (paintingInstruction.points as Point).y + canvasSection.y;
+                            let r = (paintingInstruction.width as number) / 2;
+                            let color = paintingInstruction.drawModeOptions.color;
+                            let fill = paintingInstruction.drawModeOptions.fill || false;
+                            this.matrix.fgColor(color!); 
+                            if(fill){
+                                this.matrix.drawFilledCircle(x, y, r);
+                            }
+                            else {
+                                this.matrix.drawCircle(x, y, r);
+                            }
+                            resolve(paintingInstruction);
+                            break;
+                        }
+                        case DrawMode.ELLIPSE: {
+                            console.error("Not implemented.");
+                            resolve(paintingInstruction);
+                            break;
+                        }
+                        case DrawMode.POLYGON: {
+                            let color = paintingInstruction.drawModeOptions.color;
+                            let fill = paintingInstruction.drawModeOptions.fill || false;
+                            let coordinateArray: number[] = [];
+                            (paintingInstruction.points as Point[]).forEach((point: Point) => {
+                                coordinateArray.push(point.x + canvasSection.x);
+                                coordinateArray.push(point.y + canvasSection.y);
+                            });
+                            this.matrix.fgColor(color!);
+                            if(fill){
+                                this.matrix.drawFilledPolygon(coordinateArray);
+                            }
+                            else {
+                                this.matrix.drawPolygon(coordinateArray);
+                            }
+                            resolve(paintingInstruction);
+                            break;
+                        }
+                        case DrawMode.PIXEL: {
+                            this.matrix.fgColor(paintingInstruction.drawModeOptions.color!);
+                            (paintingInstruction.points as Point[]).forEach((point: Point) => {
+                                this.matrix.setPixel(point.x + canvasSection.x, point.y + canvasSection.y);
+                            });
+                            resolve(paintingInstruction);
+                            break;
+                        }
+                        case DrawMode.TEXT: {
+                            let text = (paintingInstruction.text as string);
+                            let x = (paintingInstruction.points as Point).x + canvasSection.x;
+                            let y = (paintingInstruction.points as Point).y + canvasSection.y;
+                            let color = (paintingInstruction.drawModeOptions.color);
+                            let font = this.getFontInstance((((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).font as string), (((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).fontPath as string));
+                            let textwidth = font.stringWidth(text);
+                            let textheight = font.height();
+                            
+                            paintingInstruction.drawModeOptions.effects?.forEach((effect) => {
+                                switch(effect.effectType){
+                                    case EffectType.SCROLLLEFT: {
+                                        if((this.paintingInstructionCache[paintingInstruction.id].points as Point).x + textwidth < canvasSection.x){
+                                            (this.paintingInstructionCache[paintingInstruction.id].points as Point).x = (paintingInstruction.points as Point).x + canvasSection.width; // Wrap text to right edge.
+                                        }
+                                        else {
+                                            (this.paintingInstructionCache[paintingInstruction.id].points as Point).x = x - ((this.duration / effect.effectOptions.rate) % (textwidth + canvasSection.width)) + canvasSection.width; // rate expressed as ms/pixel.
+                                        }
+                                        x = (this.paintingInstructionCache[paintingInstruction.id].points as Point).x;
+                                        break;
+                                    }
+                                    case EffectType.SCROLLRIGHT: {
+                                        if((this.paintingInstructionCache[paintingInstruction.id].points as Point).x > (canvasSection.x + canvasSection.width)){
+                                            (this.paintingInstructionCache[paintingInstruction.id].points as Point).x = (paintingInstruction.points as Point).x - (textwidth); // Wrap text to left edge.
+                                        }
+                                        else {
+                                            (this.paintingInstructionCache[paintingInstruction.id].points as Point).x = x + ((this.duration / effect.effectOptions.rate) % (textwidth + canvasSection.width)) - textwidth; // rate expressed as ms/pixel.
+                                        }
+                                        x = (this.paintingInstructionCache[paintingInstruction.id].points as Point).x;
+                                        break;
+                                    }
+                                    case EffectType.SCROLLUP: { 
+                                        if((this.paintingInstructionCache[paintingInstruction.id].points as Point).y < (canvasSection.y - canvasSection.height)){
+                                            (this.paintingInstructionCache[paintingInstruction.id].points as Point).y = (paintingInstruction.points as Point).y + (canvasSection.height); // Wrap text to left edge.
+                                        }
+                                        else {
+                                            (this.paintingInstructionCache[paintingInstruction.id].points as Point).y = y - ((this.duration / effect.effectOptions.rate) % (textheight + canvasSection.height)) + canvasSection.height; // rate expressed as ms/pixel.
+                                        }
+                                        y = (this.paintingInstructionCache[paintingInstruction.id].points as Point).y;
+                                        break;
+                                    }
+                                    case EffectType.SCROLLDOWN: {
+                                        if((this.paintingInstructionCache[paintingInstruction.id].points as Point).y > (canvasSection.y + canvasSection.height)){
+                                            (this.paintingInstructionCache[paintingInstruction.id].points as Point).y = (paintingInstruction.points as Point).y - (textheight); // Wrap text to left edge.
+                                        }
+                                        else {
+                                            (this.paintingInstructionCache[paintingInstruction.id].points as Point).y = y + ((this.duration / effect.effectOptions.rate) % (textheight + canvasSection.height)) - textheight; // rate expressed as ms/pixel.
+                                        }
+                                        y = (this.paintingInstructionCache[paintingInstruction.id].points as Point).y;
+                                        break;
+                                    }
+                                }
+                            });
 
-                        this.matrix.font(font);
-                        this.matrix.fgColor(color!);
-                        this.matrix.drawText(text, x, y);
-                        break;
-                    }
-                    case DrawMode.IMAGE: {
-                        // Loop through image points and use SetPixel.
-                        this.getImageInstance(paintingInstruction.imagePath!)
-                            .then((res: Image) => {
-                                
-                                let imageInstance: Image = res;
-                                let x = (paintingInstruction.points as Point).x + canvasSection.x;
-                                let y = (paintingInstruction.points as Point).y + canvasSection.y;
+                            this.matrix.font(font);
+                            this.matrix.fgColor(color!);
+                            this.matrix.drawText(text, x, y);
+                            resolve(paintingInstruction);
+                            break;
+                        }
+                        case DrawMode.IMAGE: {
+                            // Loop through image points and use SetPixel.
+                            this.getImageInstance(paintingInstruction.imagePath!)
+                                .then((res: Image) => {
+                                    
+                                    let imageInstance: Image = res;
+                                    let x = (paintingInstruction.points as Point).x + canvasSection.x;
+                                    let y = (paintingInstruction.points as Point).y + canvasSection.y;
 
-                                for(let img_y = 0; img_y < imageInstance.height; img_y++){
-                                    for(let img_x = 0; img_x < imageInstance.width; img_x++){
-                                        if((imageInstance.content[img_x][img_y] & 0x000000FF) != 0){ // Alpha 0 is not drawn.
-                                            this.matrix.fgColor(imageInstance.content[img_x][img_y] >>> 8);
-                                            this.matrix.setPixel(x + img_x, y + img_y);
+                                    for(let img_y = 0; img_y < imageInstance.height; img_y++){
+                                        for(let img_x = 0; img_x < imageInstance.width; img_x++){
+                                            if((imageInstance.content[img_x][img_y] & 0x000000FF) != 0){ // Alpha 0 is not drawn.
+                                                this.matrix.fgColor(imageInstance.content[img_x][img_y] >>> 8);
+                                                this.matrix.setPixel(x + img_x, y + img_y);
+                                            }
                                         }
                                     }
-                                }
-                                this.matrix.sync();
-                            }, (rej) => {
-                                console.log(rej);
-                            });
-                            break;
+                                    // this.matrix.sync();
+                                }, (rej) => {
+                                    console.log(rej);
+                                });
+                                resolve(paintingInstruction);
+                                break;
+                        }
+
+                        // case DrawMode.BUFFER: {
+                        //     this.matrix.drawBuffer(paintingInstruction.buffer!, paintingInstruction.width!, paintingInstruction.height!); // TODO better definition.
+                        // }
                     }
-                    // case DrawMode.BUFFER: {
-                    //     this.matrix.drawBuffer(paintingInstruction.buffer!, paintingInstruction.width!, paintingInstruction.height!); // TODO better definition.
-                    // }
-                }
+                }));
             });
             // Debugging...
             // this.matrix.fgColor(0x00FF00); // Draw bound on CanvasSection
@@ -309,9 +320,14 @@ export class Painter {
             // this.matrix.setPixel(canvasSection.x, canvasSection.y + canvasSection.height - 1);
         });
 
-        
-        this.fillBlankCanvasSections();
-        this.matrix.sync();
+        Promise.all(instructionPromises)
+            .then((res) => {
+                this.fillBlankCanvasSections();
+                this.matrix.sync();
+            }, (rej) => {
+                this.fillBlankCanvasSections();
+                this.matrix.sync();
+            });        
     }
 
 

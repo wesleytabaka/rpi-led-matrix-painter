@@ -12,24 +12,6 @@ import { PaintingInstruction } from "./paintinginstruction";
 import { Point } from "./point";
 import * as matrix from "../rpi-led-matrix"
 
-const pixelMapperConfig = matrix.LedMatrixUtils.encodeMappers({"type": matrix.PixelMapperType.U}, {"type": matrix.PixelMapperType.Rotate, "angle": 180});
- const painter = new Painter(
-     {
-         ...matrix.LedMatrix.defaultMatrixOptions(),
-         rows: 32,
-         cols: 64,
-	    chainLength: 2,
-        pixelMapperConfig: pixelMapperConfig
-        
-     },
-     {
-         ...matrix.LedMatrix.defaultRuntimeOptions(),
-         gpioSlowdown: 3
-     }
- );
-
-let matrix_export = matrix.LedMatrix
-
- painter.test();
+const matrix_export = matrix.LedMatrix
 
 export { Canvas, CanvasSection, DrawMode, DrawModeOption, Effect, EffectOptions, EffectType, Painter, PaintingInstruction, Point, matrix_export as Matrix };

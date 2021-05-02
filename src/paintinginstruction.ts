@@ -5,8 +5,9 @@ import { Point } from "./point";
 export interface PaintingInstruction {
     id: string,
     drawMode: DrawMode,
-    drawModeOptions: DrawModeOption,
+    color: number,
     points: Point | Point[],
+    drawModeOptions?: DrawModeOption,
     width?: number,
     height?: number,
     layer?: number,

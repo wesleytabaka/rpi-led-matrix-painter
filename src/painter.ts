@@ -162,8 +162,8 @@ export class Painter {
                             let y = (paintingInstruction.points as Point).y + canvasSection.y;
                             let width = paintingInstruction.width as number;
                             let height = paintingInstruction.height as number;
-                            let color = paintingInstruction.drawModeOptions.color;
-                            let fill = paintingInstruction.drawModeOptions.fill || false;
+                            let color = paintingInstruction.color;
+                            let fill = paintingInstruction.drawModeOptions?.fill || false;
                             this.matrix.fgColor(color!);
                             if(fill){
                                 this.matrix.drawFilledRect(x, y, width, height);
@@ -178,8 +178,8 @@ export class Painter {
                             let x = (paintingInstruction.points as Point).x + canvasSection.x;
                             let y = (paintingInstruction.points as Point).y + canvasSection.y;
                             let r = (paintingInstruction.width as number) / 2;
-                            let color = paintingInstruction.drawModeOptions.color;
-                            let fill = paintingInstruction.drawModeOptions.fill || false;
+                            let color = paintingInstruction.color;
+                            let fill = paintingInstruction.drawModeOptions?.fill || false;
                             this.matrix.fgColor(color!); 
                             if(fill){
                                 this.matrix.drawFilledCircle(x, y, r);
@@ -196,8 +196,8 @@ export class Painter {
                             break;
                         }
                         case DrawMode.POLYGON: {
-                            let color = paintingInstruction.drawModeOptions.color;
-                            let fill = paintingInstruction.drawModeOptions.fill || false;
+                            let color = paintingInstruction.color;
+                            let fill = paintingInstruction.drawModeOptions?.fill || false;
                             let coordinateArray: number[] = [];
                             (paintingInstruction.points as Point[]).forEach((point: Point) => {
                                 coordinateArray.push(point.x + canvasSection.x);
@@ -214,7 +214,7 @@ export class Painter {
                             break;
                         }
                         case DrawMode.PIXEL: {
-                            this.matrix.fgColor(paintingInstruction.drawModeOptions.color!);
+                            this.matrix.fgColor(paintingInstruction.color);
                             (paintingInstruction.points as Point[]).forEach((point: Point) => {
                                 this.matrix.setPixel(point.x + canvasSection.x, point.y + canvasSection.y);
                             });
@@ -225,12 +225,12 @@ export class Painter {
                             let text = (paintingInstruction.text as string);
                             let x = (paintingInstruction.points as Point).x + canvasSection.x;
                             let y = (paintingInstruction.points as Point).y + canvasSection.y;
-                            let color = (paintingInstruction.drawModeOptions.color);
+                            let color = (paintingInstruction.color);
                             let font = this.getFontInstance((((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).font as string), (((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).fontPath as string));
                             let textwidth = font.stringWidth(text);
                             let textheight = font.height();
                             
-                            paintingInstruction.drawModeOptions.effects?.forEach((effect) => {
+                            paintingInstruction.drawModeOptions?.effects?.forEach((effect) => {
                                 switch(effect.effectType){
                                     case EffectType.SCROLLLEFT: {
                                         if((this.paintingInstructionCache[paintingInstruction.id].points as Point).x + textwidth < canvasSection.x){
@@ -390,7 +390,8 @@ export class Painter {
             {
                 id: "time",
                 drawMode: DrawMode.TEXT,
-                drawModeOptions: {color: 0x800000, fill: true, font: "5x7", "fontPath": "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/rpi-led-matrix/fonts/5x7.bdf"},
+                color: 0x800000,
+                drawModeOptions: {fill: true, font: "5x7", "fontPath": "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/rpi-led-matrix/fonts/5x7.bdf"},
                 points: {x: 0, y:0, z: 1},
                 text: timeString,
                 layer: 5
@@ -399,7 +400,8 @@ export class Painter {
             }, {
                 id: "date",
                 drawMode: DrawMode.TEXT,
-                drawModeOptions: {color: 0x800000, fill: false, font: "4x6", "fontPath": "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/rpi-led-matrix/fonts/4x6.bdf"},
+                color: 0x800000,
+                drawModeOptions: {fill: false, font: "4x6", "fontPath": "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/rpi-led-matrix/fonts/4x6.bdf"},
                 points: {x: 0, y: 8, z: 1},
                 text: dateString,
                 layer: 6
@@ -524,7 +526,8 @@ export class Painter {
             { //x -4, y -16
                 id: "x",
                 drawMode: DrawMode.POLYGON,
-                drawModeOptions: {color: 0x800000, fill: true, },
+                color: 0x800000,
+                drawModeOptions: {fill: true},
                 points: [
                     {x: 1, y: 0, z: 1}, // 
                     {x: 3, y: 2, z: 1}, //
@@ -548,7 +551,8 @@ export class Painter {
             {
                 id: "checkmark",
                 drawMode: DrawMode.POLYGON,
-                drawModeOptions: {color: 0x008000, fill: true, },
+                color: 0x008000,
+                drawModeOptions: {fill: true, },
                 points: [
                     {x: 9, y: 3, z: 1},
                     {x: 10, y: 4, z: 1},
@@ -567,7 +571,8 @@ export class Painter {
             {
                 id: "triangle",
                 drawMode: DrawMode.POLYGON,
-                drawModeOptions: {color: 0x805000, fill: true, },
+                color: 0x805000,
+                drawModeOptions: {fill: true, },
                 points: [
                     {x: 22, y: 0, z: 1},
                     {x: 26, y: 6, z: 1},
@@ -582,7 +587,7 @@ export class Painter {
             {
                 id: "exclamation",
                 drawMode: DrawMode.PIXEL,
-                drawModeOptions: {color: 0x000000},
+                color: 0x000000,
                 points: [
                     {x: 22, y: 2, z: 1},
                     {x: 22, y: 3, z: 1},
@@ -642,7 +647,8 @@ export class Painter {
             {
                 id: "rectangle",
                 drawMode: DrawMode.RECTANGLE,
-                drawModeOptions: {color: 0x000080, fill: true},
+                color: 0x000080,
+                drawModeOptions: {fill: true},
                 points: {x: 0, y: 0, z: 1},
                 width: 32,
                 height: 32,
@@ -654,8 +660,9 @@ export class Painter {
             {
                 id: "wesley",
                 drawMode: DrawMode.IMAGE,
-                drawModeOptions: {color: 0x000000, fill: false},
-                imagePath: "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/17529334_transparent.png",
+                color: 0x000000,
+                drawModeOptions: {fill: false},
+                imagePath: "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/17529334.png",
                 points: {x: 0, y: 0, z: 0},
                 width: 32,
                 height: 32,
@@ -668,12 +675,12 @@ export class Painter {
             {
                 id: "scrolltest",
                 drawMode: DrawMode.TEXT,
+                color: 0xFFFFFF,
                 drawModeOptions: {
-                    color: 0xFFFFFF, 
                     fill: false, 
                     font: "4x6", 
                     "fontPath": "/home/pi/code/rpi-led-matrix-painter/rpi-led-matrix-painter/rpi-led-matrix/fonts/4x6.bdf",
-                    effects: [new Effect(EffectType.SCROLLDOWN, {rate: 200})]
+                    effects: [new Effect(EffectType.SCROLLLEFT, {rate: 200})]
                 },
                 points: {x: 0, y: 0, z: 1},
                 text: timeString,

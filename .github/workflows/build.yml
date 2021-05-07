@@ -45,5 +45,8 @@ jobs:
             # version: # optional
 
       # Runs a single command using the runners shell
+      - name: install
+        run: npm i
+        
       - name: build
         run: npm run build

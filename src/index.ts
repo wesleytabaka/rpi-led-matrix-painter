@@ -10,8 +10,6 @@ import { EffectType } from "./effecttype";
 import { Painter } from "./painter";
 import { PaintingInstruction } from "./paintinginstruction";
 import { Point } from "./point";
-import * as matrix from "../rpi-led-matrix"
+import RpiLedMatrix from "./rpi-led-matrix";
 
-const matrix_export = matrix.LedMatrix
-
-export { Canvas, CanvasSection, DrawMode, DrawModeOption, Effect, EffectOptions, EffectType, Painter, PaintingInstruction, Point, matrix_export as Matrix };
+export { Canvas, CanvasSection, DrawMode, DrawModeOption, Effect, EffectOptions, EffectType, Painter, PaintingInstruction, Point, RpiLedMatrix };

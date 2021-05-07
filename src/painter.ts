@@ -133,7 +133,7 @@ export class Painter {
 
     }
 
-    protected paint(): void {
+    public paint(): void {
         // How can I crop the CanvasSection if there's overflow?
         // How about before we draw each CanvasSection we do a fill with black on the section?  It would work for the next section being drawn...
         // In other words, if there are empty portions of the canvas, we should fill them in with black as well.  Some clever maths will help.

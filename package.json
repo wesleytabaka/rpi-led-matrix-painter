@@ -8,7 +8,6 @@
     "go": "cd ./dist/ && node index.js",
     "serve": "npm run build && npm run go",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "preinstall": "npm run buildsubmodules",
     "buildsubmodules": "npm run build-rpi-rgb-led-matrix && npm run build-rpi-led-matrix",
     "build-rpi-led-matrix": "cd rpi-led-matrix && npm run build",
     "build-rpi-rgb-led-matrix": "cd rpi-led-matrix/vendor && make"

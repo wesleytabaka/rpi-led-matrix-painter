@@ -229,6 +229,7 @@ export class Painter {
                             let font = this.getFontInstance((((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).font as string), (((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).fontPath as string));
                             let textwidth = font.stringWidth(text);
                             let textheight = font.height();
+                            let draw: boolean = true;
                             
                             paintingInstruction.drawModeOptions?.effects?.forEach((effect) => {
                                 switch(effect.effectType){
@@ -272,12 +273,20 @@ export class Painter {
                                         y = (this.paintingInstructionCache[paintingInstruction.id].points as Point).y;
                                         break;
                                     }
+                                    case EffectType.BLINK: {
+                                        if(Math.floor(this.duration / effect.effectOptions.rate) % 2 == 1){
+                                            draw = false;
+                                        }
+                                        break;
+                                    }
                                 }
                             });
 
-                            this.matrix.font(font);
-                            this.matrix.fgColor(color!);
-                            this.matrix.drawText(text, x, y);
+                            if(draw){
+                                this.matrix.font(font);
+                                this.matrix.fgColor(color!);
+                                this.matrix.drawText(text, x, y);
+                            }
                             resolve(paintingInstruction);
                             break;
                         }

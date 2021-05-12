@@ -256,7 +256,7 @@ export class Painter {
         this.tick();
         this.matrix.clear();
 
-        let instructionPromises: Promise<PaintingInstruction>[] = [] as Promise<PaintingInstruction>[];
+        let instructionPromises: Promise<PaintingInstruction | null>[] = [] as Promise<PaintingInstruction | null>[];
 
         this.getCanvas().getCanvasSections().sort((a, b) => {return a.z - b.z;}).forEach((canvasSection: CanvasSection) => {
             // Blank out the CanvasSection.
@@ -273,6 +273,19 @@ export class Painter {
 
                     // Do stuff here.
                     switch (paintingInstruction.drawMode){
+                        case DrawMode.LINE: {
+                            let newPaintingInstruction = this.applyEffects(paintingInstruction, canvasSection);
+                            let x0 = (newPaintingInstruction?.points as Point[])[0].x + canvasSection.x;
+                            let y0 = (newPaintingInstruction?.points as Point[])[0].y + canvasSection.y;
+                            let x1 = (newPaintingInstruction?.points as Point[])[1].x + canvasSection.x;
+                            let y1 = (newPaintingInstruction?.points as Point[])[1].y + canvasSection.y;
+                            let color = newPaintingInstruction?.color;
+
+                            this.matrix.fgColor(color!);
+                            this.matrix.drawLine(x0, y0, x1, y1);
+                            resolve(newPaintingInstruction);
+                            break;
+                        }
                         case DrawMode.RECTANGLE: { 
                             let newPaintingInstruction = this.applyEffects(paintingInstruction, canvasSection);
                             let x = (newPaintingInstruction?.points as Point).x + canvasSection.x;
@@ -288,7 +301,7 @@ export class Painter {
                             else {
                                 this.matrix.drawRect(x, y, width, height);
                             }
-                            resolve(paintingInstruction);
+                            resolve(newPaintingInstruction);
                             break;
                         }
                         case DrawMode.CIRCLE: { 
@@ -305,7 +318,7 @@ export class Painter {
                             else {
                                 this.matrix.drawCircle(x, y, r);
                             }
-                            resolve(paintingInstruction);
+                            resolve(newPaintingInstruction);
                             break;
                         }
                         case DrawMode.ELLIPSE: {
@@ -314,11 +327,11 @@ export class Painter {
                             break;
                         }
                         case DrawMode.POLYGON: {
-                            let paintingInstructionWithEffects = this.applyEffects(paintingInstruction, canvasSection);
-                            let color = paintingInstructionWithEffects?.color;
-                            let fill = paintingInstructionWithEffects?.drawModeOptions?.fill || false;
+                            let newPaintingInstruction = this.applyEffects(paintingInstruction, canvasSection);
+                            let color = newPaintingInstruction?.color;
+                            let fill = newPaintingInstruction?.drawModeOptions?.fill || false;
                             let coordinateArray: number[] = [];
-                            (paintingInstructionWithEffects?.points as Point[]).forEach((point: Point) => {
+                            (newPaintingInstruction?.points as Point[]).forEach((point: Point) => {
                                 coordinateArray.push(point.x + canvasSection.x);
                                 coordinateArray.push(point.y + canvasSection.y);
                             });
@@ -329,7 +342,7 @@ export class Painter {
                             else {
                                 this.matrix.drawPolygon(coordinateArray);
                             }
-                            resolve(paintingInstructionWithEffects as PaintingInstruction);
+                            resolve(newPaintingInstruction);
                             break;
                         }
                         case DrawMode.PIXEL: { 
@@ -353,12 +366,12 @@ export class Painter {
                             let textheight = font.height();
                             let draw: boolean = true;
                            
-                            let paintingInstructionWithEffects = this.applyEffects(paintingInstruction, canvasSection);
+                            let newPaintingInstruction = this.applyEffects(paintingInstruction, canvasSection);
 
 
-                            if(paintingInstructionWithEffects != null){
-                                x = (paintingInstructionWithEffects?.points as Point).x + canvasSection.x;
-                                y = (paintingInstructionWithEffects?.points as Point).y + canvasSection.y;
+                            if(newPaintingInstruction != null){
+                                x = (newPaintingInstruction?.points as Point).x + canvasSection.x;
+                                y = (newPaintingInstruction?.points as Point).y + canvasSection.y;
                             }
                             else {
                                 draw = false;
@@ -369,16 +382,16 @@ export class Painter {
                                 this.matrix.fgColor(color!);
                                 this.matrix.drawText(text, x, y);
                             }
-                            resolve(paintingInstruction);
+                            resolve(newPaintingInstruction);
                             break;
                         }
                         case DrawMode.IMAGE: { 
                             // Loop through image points and use SetPixel.
+                            let newPaintingInstruction: PaintingInstruction = this.applyEffects(paintingInstruction, canvasSection) as PaintingInstruction;
                             this.getImageInstance(paintingInstruction.imagePath!)
                                 .then((res: Image) => {
                                     
                                     let imageInstance: Image = res;
-                                    let newPaintingInstruction: PaintingInstruction = this.applyEffects(paintingInstruction, canvasSection) as PaintingInstruction;
                                     let x = (newPaintingInstruction.points as Point).x + canvasSection.x;
                                     let y = (newPaintingInstruction.points as Point).y + canvasSection.y;
 
@@ -394,7 +407,7 @@ export class Painter {
                                 }, (rej) => {
                                     console.log(rej);
                                 });
-                                resolve(paintingInstruction);
+                                resolve(newPaintingInstruction);
                                 break;
                         }
 

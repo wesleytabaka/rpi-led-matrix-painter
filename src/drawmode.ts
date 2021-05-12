@@ -6,5 +6,6 @@ export enum DrawMode {
     PIXEL = "PIXEL",
     TEXT = "TEXT",
     IMAGE = "IMAGE",
-    BUFFER = "BUFFER"
+    BUFFER = "BUFFER",
+    LINE = "LINE"
 }

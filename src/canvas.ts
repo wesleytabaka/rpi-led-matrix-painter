@@ -1,5 +1,6 @@
 import * as matrix from "../rpi-led-matrix";
 import { CanvasSection } from "./canvassection";
+import { CanvasSectionSettings } from "./canvassectionsettings";
 import { PaintingInstruction } from "./paintinginstruction";
 
 export class Canvas {
@@ -37,4 +38,9 @@ export class Canvas {
         this.canvas.push(canvasSection);
     }
 
+    public setCanvas(canvasSections: CanvasSectionSettings[]): void { // Shortcut method to draw the whole canvas at once.
+        canvasSections.forEach((canvasSection) => {
+            this.setCanvasSection(canvasSection.name, canvasSection.representation);
+        });
+    }
 }

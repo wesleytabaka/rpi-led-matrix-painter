@@ -265,7 +265,7 @@ export class Painter {
             // this.matrix.sync();
 
             // TODO Use promise.all() so we know everything's been drawn to the screen.
-            canvasSection.get().representation.forEach(paintingInstruction => {                
+            canvasSection.get().representation.sort((a, b) => {return a.layer - b.layer}).forEach(paintingInstruction => {                
                 instructionPromises.push(new Promise((resolve, reject) => {
                     if(this.paintingInstructionCache[paintingInstruction.id] == undefined){
                         this.paintingInstructionCache[paintingInstruction.id] = paintingInstruction;

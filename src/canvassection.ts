@@ -1,8 +1,8 @@
+import { CanvasSectionSettings } from "./canvassectionsettings";
 import { PaintingInstruction } from "./paintinginstruction";
 
-export class CanvasSection {
-    id?: number;
-    name?: string;
+export class CanvasSection implements CanvasSectionSettings {
+    name: string;
     x: number;
     y: number;
     z: number;
@@ -11,8 +11,7 @@ export class CanvasSection {
     representation: PaintingInstruction[];
     overflow?: boolean;
 
-    constructor(x: number, y: number, z: number, width: number, height: number, representation?: PaintingInstruction[], overflow?: boolean, id?: number, name?: string){
-        this.id = id;
+    constructor(name: string, x: number, y: number, z: number, width: number, height: number, representation?: PaintingInstruction[], overflow?: boolean){
         this.name = name;
         this.x = x;
         this.y = y;

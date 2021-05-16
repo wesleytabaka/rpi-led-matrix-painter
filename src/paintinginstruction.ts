@@ -5,12 +5,12 @@ import { Point } from "./point";
 export interface PaintingInstruction {
     id: string,
     drawMode: DrawMode,
-    color: number,
     points: Point | Point[],
+    color: number,
+    layer: number,
     drawModeOptions?: DrawModeOption,
     width?: number,
     height?: number,
-    layer?: number,
     text?: string,
     imagePath?: string,
     buffer?: Buffer

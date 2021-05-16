@@ -35,8 +35,9 @@ jobs:
 
       # Runs a single command using the runners shell
       - uses: actions/setup-node@v1
-      - run: cd rpi-led-matrix
-      - run: npm run build
-      - run: cd ..
+      - run: ls -la ./rpi-led-matrix
+      - run: cd rpi-led-matrix && npm run build
+      #- run: 
+      #- run: cd ..
       - run: npm install
       - run: npm run build

@@ -6,9 +6,9 @@ name: Build
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   push:
-    branches: [ implementation ]
+    branches: [ main, implementation ]
   pull_request:
-    branches: [ implementation ]
+    branches: [ main, implementation ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -25,7 +25,7 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
         with:
-          submodules: true
+          submodules: recursive
           
     # Update references
       - name: Git Sumbodule Update
@@ -35,5 +35,8 @@ jobs:
 
       # Runs a single command using the runners shell
       - uses: actions/setup-node@v1
+      - run: cd rpi-led-matrix
+      - run: npm run build
+      - run: cd ..
       - run: npm install
       - run: npm run build

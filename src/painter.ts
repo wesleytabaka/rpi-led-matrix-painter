@@ -177,6 +177,7 @@ export class Painter {
         let dimensions: {width: number, height: number} = this.getPaintingInstructionSize(newPaintingInstruction);
         let delta_x: number = 0;
         let delta_y: number = 0;
+        let color: number = paintingInstruction.color;
         let draw: boolean = true;
 
         newPaintingInstruction.drawModeOptions?.effects?.forEach((effect) => {
@@ -223,14 +224,18 @@ export class Painter {
                     }
                     break;
                 }
+                case EffectType.PULSE: {
+                    let r = (Math.floor(((color & 0xFF0000) >>> 0) * ((effect.effectOptions.rate - (this.duration % effect.effectOptions.rate)) / effect.effectOptions.rate)) >>> 16);
+                    let g = (Math.floor(((color & 0x00FF00) >>> 0) * ((effect.effectOptions.rate - (this.duration % effect.effectOptions.rate)) / effect.effectOptions.rate)) >>> 8);
+                    let b = Math.floor(((color & 0x0000FF) >>> 0) * ((effect.effectOptions.rate - (this.duration % effect.effectOptions.rate)) / effect.effectOptions.rate));
+
+                    newPaintingInstruction.color = (r << 16) + (g << 8) + b;
+                    break;
+                }
             }
         });
 
         // Apply delta to all Points
-        // TODO
-        // if(paintingInstruction.id == "asterisk"){
-        //     console.log("before", paintingInstruction.points);
-        // }
         if(paintingInstruction.drawMode == DrawMode.POLYGON || paintingInstruction.drawMode == DrawMode.PIXEL){
             (newPaintingInstruction.points as Point[]).forEach((point) => {
                 point.x += delta_x;
@@ -241,10 +246,6 @@ export class Painter {
             (newPaintingInstruction.points as Point).x += delta_x;
             (newPaintingInstruction.points as Point).y += delta_y;
         }
-        
-        // if(paintingInstruction.id == "asterisk"){
-        //     console.log("after", newPaintingInstruction.points);
-        // }
 
         return draw ? newPaintingInstruction : null;
     }
@@ -370,6 +371,7 @@ export class Painter {
 
 
                             if(newPaintingInstruction != null){
+                                color = newPaintingInstruction.color;
                                 x = (newPaintingInstruction?.points as Point).x + canvasSection.x;
                                 y = (newPaintingInstruction?.points as Point).y + canvasSection.y;
                             }

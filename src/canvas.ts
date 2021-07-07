@@ -38,6 +38,10 @@ export class Canvas {
         this.canvas.push(canvasSection);
     }
 
+    public removeCanvasSection(canvasSectionName: string): void {
+        this.canvas.splice(this.canvas.findIndex((value) => {value.name == canvasSectionName}),1);
+    }
+
     public setCanvas(canvasSections: CanvasSectionSettings[]): void { // Shortcut method to draw the whole canvas at once.
         canvasSections.forEach((canvasSection) => {
             this.setCanvasSection(canvasSection.name, canvasSection.representation);

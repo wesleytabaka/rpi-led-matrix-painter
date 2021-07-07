@@ -37,6 +37,10 @@ export class Painter {
         this.duration = this.currentTime.getTime() - this.startTime.getTime();
     }
 
+    public clear(): void {
+        this.matrix.clear();
+    }
+
     public resetClock(): void { // Use to start effects from "zero".
         this.startTime = new Date();
         this.tick();

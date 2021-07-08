@@ -120,14 +120,23 @@ That's it!  Below is the public API spec.
 
 ## DrawMode (Enum)
 - POLYGON
+    - PaintingInstruction.points: Point[]
 - RECTANGLE
+    - PaintingInstruction.points: Point
 - CIRCLE
+    - PaintingInstruction.points: Point
 - ELLIPSE
+    - PaintingInstruction.points: Point
 - PIXEL
+    - PaintingInstruction.points: Point[]
 - TEXT
+    - PaintingInstruction.points: Point
 - IMAGE
+    - PaintingInstruction.points: Point
 - BUFFER
+    - PaintingInstruction.points: Point
 - LINE
+    - PaintingInstruction.points: Point[]
 
 ## DrawModeOption (Interface)
 ```typescript

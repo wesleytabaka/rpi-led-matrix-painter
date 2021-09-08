@@ -1,3 +1,5 @@
+[![Build](https://github.com/wesleytabaka/rpi-led-matrix-painter/actions/workflows/build.yml/badge.svg)](https://github.com/wesleytabaka/rpi-led-matrix-painter/actions/workflows/build.yml)
+
 # About rpi-led-matrix-painter
 Add drawing facilities to the excellent alexeden/rpi-led-matrix.  Takes a declarative approach to drawing on the matrix.  Manage sections of the board independently, draw shapes, text, images, and some simple effects.
 

@@ -201,10 +201,8 @@ interface Point {
     z: number
 }
 ```
-## RpiLedMatrix (Module -- re-export of alexeden/rpi-led-matrix)
-
-
-<br><br>
+## RpiLedMatrix (Module)
+This is a re-export of [wesleytabaka/rpi-led-matrix](https://github.com/wesleytabaka/rpi-led-matrix) which is forked off of [alexeden/rpi-led-matrix](https://github.com/alexeden/rpi-led-matrix).  My fork just adds the filled shapes functionality.
 
 # Issues and Contributing
 For bugs or feature requests create an issue and tag it accordingly.

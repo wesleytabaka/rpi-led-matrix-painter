@@ -96,9 +96,8 @@ jobs:
           # secure: true # optional
           # Body of mail message (might be a filename prefixed with file:// to read from)
           body: |
-            ${{ github.workflow }} #${{ github.run_number }}
             ${{ steps.setEmailSubject.outputs.EMAIL_SUBJECT }}
-            ${{ toJSON(github) }}
+            ${{ toJSON(github.event.commits) }}
           # HTML body of mail message (might be a filename prefixed with file:// to read from)
           #html_body: # optional
           # Carbon copy recipients (separated with comma)

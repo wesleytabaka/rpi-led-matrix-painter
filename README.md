@@ -6,8 +6,9 @@ Add drawing facilities to the excellent alexeden/rpi-led-matrix.  Takes a declar
 # Example
 Check out <a href="https://github.com/wesleytabaka/rpi-led-matrix-painter-example">wesleytabaka/rpi-led-matrix-painter-example</a> for a working example of the library.
 <br><br>
-Here's an idea of what you can do.<br>
-![demo](docs/demo.png)
+<a href="https://www.youtube.com/watch?feature=player_embedded&v=c1jziITVWmk" target="_blank">
+    <img src="https://img.youtube.com/vi/c1jziITVWmk/0.jpg" alt="IMAGE ALT TEXT HERE"><br>View on YouTube
+</a>
 
 # Installation
 Clone this repo into your project with:

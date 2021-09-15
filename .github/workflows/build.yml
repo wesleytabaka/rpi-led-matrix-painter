@@ -50,28 +50,12 @@ jobs:
   email:
     runs-on: ubuntu-latest
     if: always()
-    needs: [ build ]
+    needs: [ build ] # wait until build finishes.
     steps:
       - uses: actions/checkout@v2
-
-      - name: github
-        run: echo "${{ toJson(github) }}"
-      - name: job
-        run: echo "${{ toJson(job) }}"
-      #- name: get SHA1
-      #  run: echo ${{ github.sha }} | cut -b -7
-      #- name: get subject
-      #  run: echo [${{ github.repository }}] Build ${{ job.status }} - ${{ github.ref }} \(${{ github.sha }}\)
-      #- name: get subject 2
-      #  run: echo [${{ github.repository }}] Build ${{ job.status }} - ${{ github.ref }} \($(echo ${{github.sha}} | cut -b -7)\)
-        
       - id: setEmailSubject
         name: set subject
         run: echo "::set-output name=EMAIL_SUBJECT::$( echo [${{ github.repository }}] ${{ github.workflow }} \#${{ github.run_number }} resulted in  ${{ needs.build.outputs.job-status }} - ${{ github.ref }} \()$( echo ${{github.sha}} | cut -b -7 )$( echo \))"
-
-        #run: echo "::set-env name=EMAIL_SUBJECT::$( echo [${{ github.repository }}] Build ${{ job.status }} - ${{ github.ref }} \() $( echo ${{github.sha}} | cut -b -7 )$( echo \))"
-      #- name: get subject
-      #  run: echo ${{ steps.setEmailSubject.outputs.EMAIL_SUBJECT }}
 
       - name: Send email
       # You may pin to the exact commit or the version.

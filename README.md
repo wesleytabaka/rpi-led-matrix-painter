@@ -48,7 +48,7 @@ import * as Board from "rpi-led-matrix-painter";
     - List of properties defining what to draw and how to draw it.
  - Point (Interface)
     - Defines a point on the CanvasSection relative to the CanvasSection.
- - RpiLedMatrix (Module -- re-export of alexeden/rpi-led-matrix)
+ - RpiLedMatrix (Module -- re-export of [wesleytabaka/rpi-led-matrix](https://github.com/wesleytabaka/rpi-led-matrix) which itself is forked off of [alexeden/rpi-led-matrix](https://github.com/alexeden/rpi-led-matrix))
 
 # API Detail
 Here is the public API.

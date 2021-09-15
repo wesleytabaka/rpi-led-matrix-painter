@@ -79,7 +79,7 @@ jobs:
         uses: dawidd6/action-send-mail@v3.5.0
         with:
           # SMTP server address
-          server_address: smtp.ionos.com 
+          server_address: ${{ secrets.EMAIL_SMTP_SERVER }} 
           # SMTP server port
           server_port: 587
           # Authenticate as this user to SMTP server

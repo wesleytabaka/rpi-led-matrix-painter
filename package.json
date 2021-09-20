@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "postinstall": "npm run build",
     "go": "cd ./dist/ && node index.js",
     "serve": "npm run build && npm run go",
     "test": "echo \"Error: no test specified\" && exit 1",

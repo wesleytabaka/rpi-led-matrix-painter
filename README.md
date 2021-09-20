@@ -11,13 +11,9 @@ Check out <a href="https://github.com/wesleytabaka/rpi-led-matrix-painter-exampl
 </a>
 
 # Installation
-Clone this repo into your project with:
-```git
-git clone https://github.com/wesleytabaka/rpi-led-matrix-painter.git
-```
-Then install with:
-```git
-npm install ./rpi-led-matrix-painter --save
+Install with npm using:
+```bash
+npm i rpi-led-matrix-painter --save
 ```
 # API Overview
 

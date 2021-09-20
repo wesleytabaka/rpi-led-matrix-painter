@@ -30,19 +30,19 @@ jobs:
           submodules: recursive
           
     # Update references
-      - name: Git Sumbodule Update
-        run: |
-          git pull --recurse-submodules
-          git submodule update --remote --recursive
+      #- name: Git Sumbodule Update
+      #  run: |
+      #    git pull --recurse-submodules
+      #    git submodule update --remote --recursive
 
       # Runs a single command using the runners shell
       - uses: actions/setup-node@v1
       #- run: ls -la ./rpi-led-matrix # Debugging
       - run: npm i -g rimraf typescript
-      - run: npm install --prefix=./rpi-led-matrix --also=dev # also install devDependencies
+      #- run: npm install --prefix=./rpi-led-matrix --also=dev # also install devDependencies
       #- run: ls -la ./rpi-led-matrix/node_modules # Debugging
       #- run: ls -la ./node_modules
-      - run: npm run build --prefix=./rpi-led-matrix
+      #- run: npm run build --prefix=./rpi-led-matrix
       - run: npm install
       #- run: ls -la ./node_modules # Debugging
       - run: npm run build

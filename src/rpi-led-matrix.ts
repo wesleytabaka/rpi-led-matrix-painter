@@ -1,3 +1,3 @@
-import * as RpiLedMatrix from "../rpi-led-matrix";
+import * as RpiLedMatrix from "wesleytabaka-rpi-led-matrix";
 
 export default RpiLedMatrix;

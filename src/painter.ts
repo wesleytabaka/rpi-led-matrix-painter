@@ -1,4 +1,4 @@
-import * as matrix from "../rpi-led-matrix";
+import * as matrix from "wesleytabaka-rpi-led-matrix";
 import { Canvas } from "./canvas";
 import { CanvasSection } from "./canvassection";
 import { DrawMode } from "./drawmode";

@@ -1,4 +1,4 @@
-import * as matrix from "../rpi-led-matrix";
+import * as matrix from "wesleytabaka-rpi-led-matrix";
 import { CanvasSection } from "./canvassection";
 import { CanvasSectionSettings } from "./canvassectionsettings";
 import { PaintingInstruction } from "./paintinginstruction";

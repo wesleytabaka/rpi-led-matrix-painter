@@ -16,16 +16,18 @@
     "type": "git",
     "url": "git+https://github.com/wesleytabaka/rpi-led-matrix-painter.git"
   },
-  "author": "Wesley Tabaka <wt@wesleytabaka.com>",
+  "author": "Wesley Tabaka <wesley@wesleytabaka.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/wesleytabaka/rpi-led-matrix-painter/issues"
   },
   "homepage": "https://github.com/wesleytabaka/rpi-led-matrix-painter#readme",
   "dependencies": {
-    "jimp": "^0.16.1"
+    "jimp": "^0.16.1",
+    "wesleytabaka-rpi-led-matrix": "^1.11.1"
   },
   "devDependencies": {
+    "@types/node": "^16.9.3",
     "source-map-support": "^0.5.19"
   }
 }

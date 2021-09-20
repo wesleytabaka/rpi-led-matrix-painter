@@ -1,4 +1,0 @@
-
-[submodule "rpi-led-matrix"]
-	path = rpi-led-matrix
-	url = https://github.com/wesleytabaka/rpi-led-matrix.git

@@ -1,6 +1,6 @@
 {
   "name": "rpi-led-matrix-painter",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "Add drawing facilities to rpi-led-matrix. Manage sections of the board independently, draw shapes, text, and images.",
   "main": "dist/index.js",
   "scripts": {

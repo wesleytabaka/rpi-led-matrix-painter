@@ -1,7 +1,8 @@
 {
   "name": "rpi-led-matrix-painter",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Add drawing facilities to rpi-led-matrix. Manage sections of the board independently, draw shapes, text, and images.",
+  "keywords": ["raspberry pi", "raspberrypi", "rpi", "rgb matrix", "rgb led matrix", "led matrix", "led board", "led", "leds", "rpi-led-matrix-painter", "effects", "polygons", "typescript", "declarative"],
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",

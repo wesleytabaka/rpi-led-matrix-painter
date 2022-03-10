@@ -386,7 +386,11 @@ export class Painter {
                             if(draw){
                                 this.matrix.font(font);
                                 this.matrix.fgColor(color!);
-                                this.matrix.drawText(text, x, y);
+                                let running_x = x;
+                                for(let c = 0; c < text.length; c++){
+                                    this.matrix.drawText(text.charAt(c), running_x, y);
+                                    running_x += font.stringWidth(text.charAt(c));
+                                }
                             }
                             resolve(newPaintingInstruction);
                             break;

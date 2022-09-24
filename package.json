@@ -1,6 +1,6 @@
 {
   "name": "rpi-led-matrix-painter",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Add drawing facilities to rpi-led-matrix. Manage sections of the board independently, draw shapes, text, and images.",
   "keywords": [
     "raspberry pi",
@@ -20,14 +20,16 @@
   ],
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "npx tsc",
     "postinstall": "npm run build",
     "go": "cd ./dist/ && node index.js",
     "serve": "npm run build && npm run go",
     "test": "echo \"Error: no test specified\" && exit 1",
     "buildsubmodules": "npm run build-rpi-rgb-led-matrix && npm run build-rpi-led-matrix",
     "build-rpi-led-matrix": "cd rpi-led-matrix && npm run build",
-    "build-rpi-rgb-led-matrix": "cd rpi-led-matrix/vendor && make"
+    "build-rpi-rgb-led-matrix": "cd rpi-led-matrix/vendor && make",
+    "prepack": "npx rimraf dist",
+    "postpack": "mv rpi-led-matrix-painter-*.tgz ./npm_packages"
   },
   "repository": {
     "type": "git",
@@ -45,5 +47,8 @@
     "source-map-support": "^0.5.20",
     "wesleytabaka-rpi-led-matrix": "~1.12.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "rimraf": "^3.0.2",
+    "typescript": "^4.8.3"
+  }
 }

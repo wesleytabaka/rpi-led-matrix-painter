@@ -259,7 +259,7 @@ export class Painter {
         // How about before we draw each CanvasSection we do a fill with black on the section?  It would work for the next section being drawn...
         // In other words, if there are empty portions of the canvas, we should fill them in with black as well.  Some clever maths will help.
         this.tick();
-        this.matrix.clear();
+	    this.matrix.clear();
 
         let instructionPromises: Promise<PaintingInstruction | null>[] = [] as Promise<PaintingInstruction | null>[];
 
@@ -270,16 +270,18 @@ export class Painter {
             // this.matrix.sync();
 
             // TODO Use promise.all() so we know everything's been drawn to the screen.
-            canvasSection.get().representation.sort((a, b) => {return a.layer - b.layer}).forEach(paintingInstruction => {                
+            canvasSection.get().representation.sort((a, b) => {return a.layer - b.layer}).forEach(paintingInstruction => {     
+                let dereferencedPaintingInstruction: PaintingInstruction = JSON.parse(JSON.stringify(paintingInstruction));
+
                 instructionPromises.push(new Promise((resolve, reject) => {
-                    if(this.paintingInstructionCache[paintingInstruction.id] == undefined){
-                        this.paintingInstructionCache[paintingInstruction.id] = paintingInstruction;
+                    if(this.paintingInstructionCache[dereferencedPaintingInstruction.id] == undefined){
+                        this.paintingInstructionCache[dereferencedPaintingInstruction.id] = dereferencedPaintingInstruction;
                     } 
 
                     // Do stuff here.
-                    switch (paintingInstruction.drawMode){
+                    switch (dereferencedPaintingInstruction.drawMode){
                         case DrawMode.LINE: {
-                            let newPaintingInstruction = this.applyEffects(paintingInstruction, canvasSection);
+                            let newPaintingInstruction = this.applyEffects(dereferencedPaintingInstruction, canvasSection);
                             let x0 = (newPaintingInstruction?.points as Point[])[0].x + canvasSection.x;
                             let y0 = (newPaintingInstruction?.points as Point[])[0].y + canvasSection.y;
                             let x1 = (newPaintingInstruction?.points as Point[])[1].x + canvasSection.x;
@@ -292,7 +294,7 @@ export class Painter {
                             break;
                         }
                         case DrawMode.RECTANGLE: { 
-                            let newPaintingInstruction = this.applyEffects(paintingInstruction, canvasSection);
+                            let newPaintingInstruction = this.applyEffects(dereferencedPaintingInstruction, canvasSection);
                             let x = (newPaintingInstruction?.points as Point).x + canvasSection.x;
                             let y = (newPaintingInstruction?.points as Point).y + canvasSection.y;
                             let width = newPaintingInstruction?.width as number;
@@ -310,7 +312,7 @@ export class Painter {
                             break;
                         }
                         case DrawMode.CIRCLE: { 
-                            let newPaintingInstruction = this.applyEffects(paintingInstruction, canvasSection);
+                            let newPaintingInstruction = this.applyEffects(dereferencedPaintingInstruction, canvasSection);
                             let x = (newPaintingInstruction?.points as Point).x + canvasSection.x;
                             let y = (newPaintingInstruction?.points as Point).y + canvasSection.y;
                             let r = (newPaintingInstruction?.width as number) / 2;
@@ -328,11 +330,11 @@ export class Painter {
                         }
                         case DrawMode.ELLIPSE: {
                             console.error("Not implemented.");
-                            resolve(paintingInstruction);
+                            resolve(dereferencedPaintingInstruction);
                             break;
                         }
                         case DrawMode.POLYGON: {
-                            let newPaintingInstruction = this.applyEffects(paintingInstruction, canvasSection);
+                            let newPaintingInstruction = this.applyEffects(dereferencedPaintingInstruction, canvasSection);
                             let color = newPaintingInstruction?.color;
                             let fill = newPaintingInstruction?.drawModeOptions?.fill || false;
                             let coordinateArray: number[] = [];
@@ -351,7 +353,7 @@ export class Painter {
                             break;
                         }
                         case DrawMode.PIXEL: { 
-                            let newPaintingInstruction: PaintingInstruction = this.applyEffects(paintingInstruction, canvasSection) as PaintingInstruction;
+                            let newPaintingInstruction: PaintingInstruction = this.applyEffects(dereferencedPaintingInstruction, canvasSection) as PaintingInstruction;
                             this.matrix.fgColor(newPaintingInstruction.color);
                             if(newPaintingInstruction != null){
                                 (newPaintingInstruction.points as Point[]).forEach((point: Point) => {
@@ -362,16 +364,16 @@ export class Painter {
                             break;
                         }
                         case DrawMode.TEXT: {
-                            let text = (paintingInstruction.text as string);
-                            let x = (paintingInstruction.points as Point).x + canvasSection.x;
-                            let y = (paintingInstruction.points as Point).y + canvasSection.y;
-                            let color = (paintingInstruction.color);
-                            let font = this.getFontInstance((((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).font as string), (((paintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).fontPath as string));
+                            let text = (dereferencedPaintingInstruction.text as string);
+                            let x = (dereferencedPaintingInstruction.points as Point).x + canvasSection.x;
+                            let y = (dereferencedPaintingInstruction.points as Point).y + canvasSection.y;
+                            let color = (dereferencedPaintingInstruction.color);
+                            let font = this.getFontInstance((((dereferencedPaintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).font as string), (((dereferencedPaintingInstruction as PaintingInstruction).drawModeOptions as DrawModeOption).fontPath as string));
                             let textwidth = font.stringWidth(text);
                             let textheight = font.height();
                             let draw: boolean = true;
                            
-                            let newPaintingInstruction = this.applyEffects(paintingInstruction, canvasSection);
+                            let newPaintingInstruction = this.applyEffects(dereferencedPaintingInstruction, canvasSection);
 
 
                             if(newPaintingInstruction != null){
@@ -397,8 +399,8 @@ export class Painter {
                         }
                         case DrawMode.IMAGE: { 
                             // Loop through image points and use SetPixel.
-                            let newPaintingInstruction: PaintingInstruction = this.applyEffects(paintingInstruction, canvasSection) as PaintingInstruction;
-                            this.getImageInstance(paintingInstruction.imagePath!)
+                            let newPaintingInstruction: PaintingInstruction = this.applyEffects(dereferencedPaintingInstruction, canvasSection) as PaintingInstruction;
+                            this.getImageInstance(dereferencedPaintingInstruction.imagePath!)
                                 .then((res: Image) => {
                                     
                                     let imageInstance: Image = res;
@@ -442,7 +444,7 @@ export class Painter {
             }, (rej) => {
                 this.fillBlankCanvasSections();
                 this.matrix.sync();
-            });        
+	    });
     }
 
 }
